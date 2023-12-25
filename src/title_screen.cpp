@@ -37,7 +37,7 @@ void TitleScreen::draw(sf::RenderWindow& window){
     // inside the main loop, between window.clear() and window.display()
     window.draw(text);
 }
-void TitleScreen::update(){
+void TitleScreen::update(double dt){
 
 }
 BitFlag TitleScreen::handleInput(sf::Event& event){
@@ -65,7 +65,7 @@ BitFlag TitleScreen::handleInput(sf::Event& event){
 
     return handleInputFlags;
 }
-void TitleScreen::load(){
+void TitleScreen::load(sf::RenderWindow& window){
     // load the title screen
 }
 void TitleScreen::unload(){

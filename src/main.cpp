@@ -9,6 +9,7 @@
 // initialize globals
 int FRAMERATE = 60;
 double DELTATIME = 1.0 / (double) FRAMERATE; // tie physics to framerate
+int PIXELS_PER_METER = 100;
 
 /*
 Create the main gamescreen and run the game loop.
@@ -26,6 +27,10 @@ int main()
     // make gamescreen classes using pointers
     TitleScreen* titleScreen = new TitleScreen();
     GamePlay* gamePlay = new GamePlay();
+
+    // load gamescreen classes
+    titleScreen->load(window);
+    gamePlay->load(window);
 
     // put gamescreen classes into map
     std::map<WindowState, GameScreen*> windowMap;
@@ -64,6 +69,9 @@ int main()
                     break;
             }
         }
+
+        // updates
+        activeWindow->update(DELTATIME);
 
         // clear the window with black color
         window.clear(sf::Color::Black);

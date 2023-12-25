@@ -2,10 +2,21 @@
 #ifndef GLOBALS_HPP_INCLUDED
 #define GLOBALS_HPP_INCLUDED
 
+template <typename T>
+struct Rect
+{
+    T x_{0}, y_{0}, width_{0}, height_{0};
+};
+template <typename T>
+struct XY
+{
+    T x_{0}, y_{0};
+};
 
 // globals
 extern int FRAMERATE;
 extern double DELTATIME; // tie physics to framerate
+extern int PIXELS_PER_METER; // meters * PIXELS_PER_METER = pixels
 
 enum class WindowState {
     TITLE_SCREEN,

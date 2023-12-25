@@ -47,6 +47,11 @@ struct BitFlag
         return (m_FlagValue & (int)multiFlag) != 0;
     }
 
+    void ClearFlag()
+    {
+        m_FlagValue = 0;
+    }
+
     uint8_t m_FlagValue = 0;
 };
 

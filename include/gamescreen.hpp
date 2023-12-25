@@ -10,9 +10,9 @@ class GameScreen
 {
     public:
         virtual void draw(sf::RenderWindow& window){};
-        virtual void update(){};
+        virtual void update(double dt){};
         virtual BitFlag handleInput(sf::Event& event){return BitFlag();};
-        virtual void load(){};
+        virtual void load(sf::RenderWindow& window){};
         virtual void unload(){};
 };
 
