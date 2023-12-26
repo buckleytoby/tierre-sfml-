@@ -41,7 +41,7 @@ class DynamicObject
         DynamicObjectTypes dynamic_object_type_{DynamicObjectTypes::GENERIC};
 
         // params
-        double goal_dist_threshold_{0.5}; // in meters, euclidean distance
+        double goal_dist_threshold_{0.25}; // in meters, euclidean distance
         
 
         // virtual functions
@@ -62,8 +62,35 @@ enum class WorkerStates{
     MOVING,
     GATHERING,
     GATHERIDLE,
-    BUILDING,
+    CONSTRUCTING,
+    CONSTRUCTINGIDLE,
+    CRAFTING,
+    CRAFTINGIDLE,
+};
+enum class NeedsTypes{
+    FOOD,
+    SLEEP,
+    WATER,
+};
 
+class Need
+{
+    public:
+        NeedsTypes need_type_{NeedsTypes::FOOD};
+        double val_{0.0};
+        double max_{100.0};
+        double deterioration_rate_{0.1}; // per second
+        double danger_level_{10.0}; // at this level the worker will prioritize this need over all else
+        double auto_fulfill_level_{25.0}; // at this level the worker will automatically fulfill this need if they can
+        void update(double dt){val_ -= deterioration_rate_ * dt;}
+        bool IsCritical(){return val_ < danger_level_;}
+        bool IsAutoFulfillable(){return val_ < auto_fulfill_level_;}
+};
+
+class FoodNeed : public Need
+{
+    public:
+        FoodNeed(){need_type_ = NeedsTypes::FOOD; val_ = 100.0; deterioration_rate_ = 5.0; auto_fulfill_level_ = 50.0;}
 };
 
 class Worker : public DynamicObject
@@ -72,31 +99,41 @@ class Worker : public DynamicObject
         using inherited = DynamicObject;
     public:
         WorkerStates worker_state_{WorkerStates::IDLE};
-        std::map<ResourceTypes, ResourceItem> inventory_map_;
+        std::map<ItemTypes, Item> inventory_map_;
         std::map<SkillTypes, Skill> skill_map_;
+        std::map<NeedsTypes, Need> needs_map_{
+            {NeedsTypes::FOOD, FoodNeed()}
+        };
         ImmediateSurroundings immediate_surroundings_;
         NearbySurroundings nearby_surroundings_;
 
         // medium lvl vars
         XY<double> goal_{0.0, 0.0};
-        double gather_time_{0.0};
-        std::shared_ptr<Resource> gather_resource_ptr_{nullptr};
-
+        double action_time_{0.0};
+        std::shared_ptr<Resource> selected_resource_ptr_{nullptr};
+        std::shared_ptr<Building> selected_building_ptr_{nullptr};
         
 
-        Worker(){SetDynamicObjectType(DynamicObjectTypes::WORKER);}
+        Worker();
         void update(double dt);
         void AI(double dt);
         void SetGoal(double x, double y);
         void SetState(WorkerStates worker_state){worker_state_ = worker_state;}
-        void AddToInventory(ResourceTypes itemType, double amount);
-        void RemoveFromInventory(ResourceTypes itemType);
+        void AddToInventory(ItemTypes itemType, double amount);
+        void RemoveFromInventory(ItemTypes itemType);
         Rect<double> GetImmediateSurroundingsRect();
         Rect<double> GetNearbySurroundingsRect();
 
         // medium lvl actions
         void MoveTowardsGoal();
         void Gather(double dt);
+        void Construct(double dt);
+        void Craft(double dt);
+        void TransferItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr);
+        void TransferInventory();
+        void TakeItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr);
+        void TakeInventory();
+        void Eat();
 };
 
 #endif // DYNAMIC_OBJECTS_HPP

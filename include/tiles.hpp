@@ -5,11 +5,7 @@
 #include <memory>
 #include <map>
 #include "resources.hpp"
-
-enum class BuildingTypes {
-    NONE,
-    FARM
-};
+#include "buildings.hpp"
 
 enum class ArtCodes {
 };
@@ -18,7 +14,8 @@ enum class ArtCodes {
 class Tile {
     public:
         std::map<ResourceTypes, std::shared_ptr<Resource>> resource_map_; // ResourceType -> Resource
-        BuildingTypes building_{0}; // for now each tile can have 1 building
+        BuildingTypes building_type_{BuildingTypes::NONE}; // for now each tile can have 1 building
+        std::shared_ptr<Building> building_ptr_;
         int x_{0}, y_{0}; // location in meters
         ArtCodes art_code_{0}; // used for buildings that take up multiple tiles
 

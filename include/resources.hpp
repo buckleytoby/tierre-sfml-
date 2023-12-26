@@ -4,10 +4,11 @@
 
 enum class ResourceTypes {
     NONE,
-    LUMBER,
+    LUMBER = 128,
     STONE,
     WATER,
     GRASS,
+    CORN,
 };
 
 class Resource
@@ -20,6 +21,7 @@ class Resource
 
         // resource mutable parameters
         double total_{0.0};
+        int level_{0}; // level of resource, 0 is base level
 
         // resource methods
         Resource(){};
@@ -27,6 +29,12 @@ class Resource
         double GetTotal(){return total_;}
         void AddTotal(double total){total_ += total;}
         void RemoveTotal(double total){total_ -= total;}
+        double Extract(){
+            // get min of GetTotal & yield_per_gather_
+            double amount = std::min(GetTotal(), yield_per_gather_);
+            RemoveTotal(amount);
+            return amount;
+        }
 
 };
 
@@ -40,5 +48,14 @@ class Stone : public Resource
     public:
         Stone(double total){resource_type_ = ResourceTypes::STONE; time_to_gather_ = 2.0; yield_per_gather_ = 1.0; total_ = total;}
 };
+
+class CornResource : public Resource
+{
+    public:
+        CornResource(double total){resource_type_ = ResourceTypes::CORN; time_to_gather_ = 5.0; yield_per_gather_ = 1.0; total_ = total;}
+};
+
+
+// TODO: make resource factory
 
 #endif // RESOURCES_HPP

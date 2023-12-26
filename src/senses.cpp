@@ -4,6 +4,9 @@
 void Surroundings::SetResource(std::map<ResourceTypes, std::shared_ptr<Resource>> resources){
     resources_ = resources;
 }
+void Surroundings::SetBuilding(std::map<BuildingTypes, std::shared_ptr<Building>> buildings){
+    buildings_ = buildings;
+}
 Rect<double> Surroundings::GetLocalRect(){
     // rect local to the parent
     // calculate min max x, y
@@ -13,13 +16,7 @@ Rect<double> Surroundings::GetLocalRect(){
 /////////////////////////////////////// End Surroundings ///////////////////////////////////////
 
 /////////////////////////////////////// ImmediateSurroundings ///////////////////////////////////////
-ImmediateSurroundings::ImmediateSurroundings(){
-    range_ = 1.0;
-}
 /////////////////////////////////////// End ImmediateSurroundings ///////////////////////////////////////
 
 /////////////////////////////////////// NearbySurroundings ///////////////////////////////////////
-NearbySurroundings::NearbySurroundings(){
-    range_ = 5.0;
-}
 /////////////////////////////////////// End NearbySurroundings ///////////////////////////////////////

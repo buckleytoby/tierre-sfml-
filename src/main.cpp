@@ -6,6 +6,9 @@
 #include "gameplay.hpp"
 #include "gamescreen.hpp"
 
+// declare extern variables
+std::map<ResourceTypes, ItemTypes> RESOURCE_TO_ITEM_MAP;
+
 // initialize globals
 int FRAMERATE = 60;
 double DELTATIME = 1.0 / (double) FRAMERATE; // tie physics to framerate
@@ -16,6 +19,14 @@ Create the main gamescreen and run the game loop.
 */
 int main()
 {
+    RESOURCE_TO_ITEM_MAP = {
+        {ResourceTypes::NONE, ItemTypes::NONE},
+        {ResourceTypes::LUMBER, ItemTypes::LUMBER},
+        {ResourceTypes::STONE, ItemTypes::STONE},
+        {ResourceTypes::WATER, ItemTypes::WATER},
+        {ResourceTypes::GRASS, ItemTypes::GRASS},
+        {ResourceTypes::CORN, ItemTypes::CORN},
+    };
 
     auto window = sf::RenderWindow{ { 1920u, 1080u }, "CMake SFML Project"};
     window.setFramerateLimit(FRAMERATE);

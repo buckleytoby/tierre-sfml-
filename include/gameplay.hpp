@@ -63,18 +63,6 @@ class Viewport {
         double GetHeight();
 };
 
-class Recipe {
-    public:
-        std::map<ResourceTypes, int> resource_inputs_; // ResourceType -> amount needed
-        std::map<ResourceTypes, std::vector<double, int>> resource_outputs_; // ResourceType -> (probability, amount generated)
-};
-
-class Building {
-    public:
-        BuildingTypes building_type_;
-        std::vector<Recipe> recipes_; // allowable recipes in this building
-};
-
 
 class GamePlay : GameScreen
 {

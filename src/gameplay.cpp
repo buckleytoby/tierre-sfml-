@@ -1,6 +1,22 @@
 #include "gameplay.hpp"
 
+
+
+
 // Hard Coded Enum Names
+const std::string to_full_name(ResourceTypes p){
+    switch(p)
+    {
+        case ResourceTypes::LUMBER: return "Lumber";
+        case ResourceTypes::STONE: return "Stone";
+        case ResourceTypes::WATER: return "Water";
+        case ResourceTypes::GRASS: return "Grass";
+        case ResourceTypes::CORN: return "Corn";
+    
+    }
+    return ""; // or an empty string
+    
+}
 const std::string to_string(ResourceTypes p){
   switch(p)
   {
@@ -8,6 +24,7 @@ const std::string to_string(ResourceTypes p){
     case ResourceTypes::STONE: return "S";
     case ResourceTypes::WATER: return "W";
     case ResourceTypes::GRASS: return "G";
+    case ResourceTypes::CORN: return "C";
 
   }
   return ""; // or an empty string
@@ -23,6 +40,13 @@ const sf::Color to_color(ResourceTypes p){
   }
   return sf::Color::White;
 }
+const std::string to_string(ItemTypes p){
+    switch(p)
+    {
+        case ItemTypes::NONE: return "";
+    }
+    return ""; // or an empty string
+}
 const std::string to_string(WorkerStates p){
   switch(p)
   {
@@ -30,10 +54,70 @@ const std::string to_string(WorkerStates p){
     case WorkerStates::MOVING: return "moving";
     case WorkerStates::GATHERIDLE: return "gatheridle";
     case WorkerStates::GATHERING: return "gathering";
-    case WorkerStates::BUILDING: return "building";
+    case WorkerStates::CONSTRUCTING: return "constructing";
 
   }
   return ""; // or an empty string
+}
+const std::string to_string(NeedsTypes p){
+  switch(p)
+  {
+    case NeedsTypes::FOOD: return "food";
+    case NeedsTypes::SLEEP: return "sleep";
+    case NeedsTypes::WATER: return "water";
+
+  }
+  return ""; // or an empty string
+}
+const std::string to_string(BuildingTypes p){
+  switch(p)
+  {
+    case BuildingTypes::NONE: return "";
+    case BuildingTypes::WORKSPACE: return "Ws";
+    case BuildingTypes::FARM: return "Fa";
+  }
+  return ""; // or an empty string
+}
+const std::string to_full_string(BuildingTypes p){
+  switch(p)
+  {
+    case BuildingTypes::NONE: return "";
+    case BuildingTypes::WORKSPACE: return "Workspace";
+    case BuildingTypes::FARM: return "Farm";
+  }
+  return ""; // or an empty string
+}
+const std::string to_full_string(BuildingStatus p){
+    switch(p)
+    {
+        case BuildingStatus::PRECONSTRUCTION: return "Preconstruction";
+        case BuildingStatus::CONSTRUCTION: return "Construction";
+        case BuildingStatus::READY: return "Ready";
+        case BuildingStatus::OPERATING: return "Operating";
+    }
+    return ""; // or an empty string
+}
+const std::string to_full_string(ItemTypes p){
+    switch(p)
+    {
+        case ItemTypes::NONE: return "";
+        case ItemTypes::CORNSEED: return "Corn Seed";
+        case ItemTypes::LUMBER: return "Lumber";
+        case ItemTypes::STONE: return "Stone";
+        case ItemTypes::WATER: return "Water";
+        case ItemTypes::GRASS: return "Grass";
+        case ItemTypes::CORN: return "Corn";
+    }
+    return ""; // or an empty string
+}
+const std::string to_full_string(RecipeTypes p){
+    switch(p)
+    {
+        case RecipeTypes::NONE: return "";
+        case RecipeTypes::CORNSEED: return "Corn Seed";
+        case RecipeTypes::CORN: return "Corn";
+    }
+    return ""; // or an empty string
 }
 
 /////////////////////////////////////// GamePlay ///////////////////////////////////////
@@ -53,13 +137,19 @@ GamePlay::GamePlay(){
     viewport_.SetHeight(10);
 
     // hard code some tiles
-    Tile tile, tile2;
-    Lumber* lumber = new Lumber(100.0); // kg
-    Stone* stone = new Stone(100.0);
+    auto tile = std::make_shared<Tile>();
+    auto tile2 = std::make_shared<Tile>();
+    auto tile3 = std::make_shared<Tile>();
+    auto lumber = std::make_shared<Lumber>(100.0); 
+    auto stone = std::make_shared<Stone>(100.0);
+    auto corn = std::make_shared<CornResource>(100.0);
     std::shared_ptr<Resource> resource1(lumber);
     std::shared_ptr<Resource> resource2(stone);
-    tile.AddResource(resource1);
-    tile2.AddResource(resource2);
+    tile->AddResource(resource1);
+    tile2->AddResource(resource2);
+    tile3->AddResource(std::shared_ptr<Resource>(corn));
+    map_.SetTile(4, 4, tile3);
+
     map_.SetTile(5, 5, tile);
     map_.SetTile(5, 6, tile);
     map_.SetTile(5, 7, tile);
@@ -84,6 +174,10 @@ GamePlay::GamePlay(){
     worker->SetX(5);
     worker->SetY(5);
     worker->SetSpeed(1);
+    worker->needs_map_[NeedsTypes::FOOD].val_ = 60.0;
+    // give worker starting inventory of corn
+    worker->AddToInventory(ItemTypes::CORN, 10);
+
     map_.dynamic_object_ptrs_.push_back(std::unique_ptr<DynamicObject>((DynamicObject*)worker));
 
 }
@@ -122,10 +216,17 @@ void GamePlay::draw(sf::RenderWindow& window){
             // get the string
             std::string str = "";
             sf::Color color(0, 0, 0);
-            // iterate through resources
-            for (auto& resource : map_.GetTile(i, j)->resource_map_){
-                str += to_string(resource.second->resource_type_);
-                color = to_color(resource.second->resource_type_);
+
+            // check for building
+            if (tile->building_type_ != BuildingTypes::NONE){
+                str += to_string(tile->building_type_);
+                color = sf::Color::White;
+            } else {
+                // iterate through resources
+                for (auto& resource : map_.GetTile(i, j)->resource_map_){
+                    str += to_string(resource.second->resource_type_);
+                    color = to_color(resource.second->resource_type_);
+                }
             }
             if (str == ""){
                 continue;
@@ -173,8 +274,8 @@ void GamePlay::draw(sf::RenderWindow& window){
 
     // HUD
     // HUD outline
-    sf::RectangleShape shape(sf::Vector2f(280, 130));
-    shape.setPosition(15.0, window.getSize().y - 150);
+    sf::RectangleShape shape(sf::Vector2f(300, window.getSize().y - 100));
+    shape.setPosition(15.0, 110);
     shape.setFillColor(sf::Color::Black);
     // set a 10-pixel wide orange outline
     shape.setOutlineThickness(10.f);
@@ -183,46 +284,118 @@ void GamePlay::draw(sf::RenderWindow& window){
     // end HUD outline
 
     // make string for selected unit
+    std::string str = "";
     for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-        std::string str = "Selected Unit: ";
-        switch (dynamic_object_ptr->dynamic_object_type_){
-            case DynamicObjectTypes::WORKER:
-                str += "Worker";
-                // add inventory
-                str += "\nInventory: ";
-                for (auto& resource : std::static_pointer_cast<Worker>(dynamic_object_ptr)->inventory_map_){
-                    str += to_string(resource.first);
-                    str += ": ";
-                    str += std::to_string(resource.second.GetAmount());
-                    str += ", ";
-                }
-                // add state
-                str += "\nState: ";
-                str += to_string(std::static_pointer_cast<Worker>(dynamic_object_ptr)->worker_state_);
-                break;
-            case DynamicObjectTypes::GENERIC:
-                str += "Generic";
-                break;
-            default:
-                break;
+        str += "Selected Unit: ";
+        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+            str += "Worker";
+            // add inventory
+            str += "\nInventory: ";
+            for (auto& item : worker->inventory_map_){
+                str += to_full_string(item.first);
+                str += ": ";
+                str += std::to_string(item.second.GetAmount());
+                str += ", ";
+            }
+            // add state
+            str += "\nState: ";
+            str += to_string(worker->worker_state_);
+            // if gathering, add gather progress
+            if (worker->worker_state_ == WorkerStates::GATHERING){
+                str += "\nGathering " + to_full_name(worker->selected_resource_ptr_->resource_type_) + " Progress: ";
+                str += std::to_string(worker->action_time_) + " / " + std::to_string(worker->selected_resource_ptr_->time_to_gather_);
+            }
+            // add needs
+            str += "\nNeeds: ";
+            for (auto& need : worker->needs_map_){
+                str += to_string(need.first);
+                str += ": ";
+                str += std::to_string(need.second.val_);
+                str += ", ";
+            }
+
+
+        } else if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::GENERIC){
+            str += "Generic";
+            break;
         }
         // add position
         str += "\nPos: " + std::to_string(dynamic_object_ptr->footprint_.x_);
         str += ", ";
         str += std::to_string(dynamic_object_ptr->footprint_.y_);
-        // draw the string
-        sf::Text text;
-        text.setFont(font);
-        text.setString(str);
-        text.setPosition(20, window.getSize().y - 150 + 10);
-        text.setCharacterSize(12); // pixels
-        text.setFillColor(sf::Color::White);
-        text.setStyle(sf::Text::Bold);
-        window.draw(text);
     }
     // end make string for selected unit
 
+    // make string for selected tile
+    if (map_.selected_tile_ptr_ != nullptr){
+        str += "Selected Tile: ";
+        // add position
+        str += "\nPos: " + std::to_string(map_.selected_tile_ptr_->x_);
+        str += ", ";
+        str += std::to_string(map_.selected_tile_ptr_->y_);
+        // add resources
+        str += "\nResources: ";
+        for (auto& resource : map_.selected_tile_ptr_->resource_map_){
+            str += to_full_name(resource.second->resource_type_);
+            str += ": ";
+            str += std::to_string(resource.second->GetTotal());
+            str += ", ";
+        }
+        // add building
+        if (map_.selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
+            str += "\nBuilding: ";
+            str += to_full_string(map_.selected_tile_ptr_->building_type_);
+            str += "\nBuilding Status: " + to_full_string(map_.selected_tile_ptr_->building_ptr_->GetStatus());
+            str += "\nInventory: ";
+            for (auto& item : map_.selected_tile_ptr_->building_ptr_->inventory_map_){
+                str += to_full_string(item.first);
+                str += ": ";
+                str += std::to_string(item.second);
+                str += ", ";
+            }
+            // switch over building status
+            switch (map_.selected_tile_ptr_->building_ptr_->GetStatus()){
+                case BuildingStatus::PRECONSTRUCTION:
+                    // iterate through item_reqs_map
+                    str += "\nItem Reqs: ";
+                    for (auto& item : map_.selected_tile_ptr_->building_ptr_->item_reqs_map_){
+                        str += to_full_string(item.first);
+                        str += ": ";
+                        str += std::to_string(item.second);
+                        str += ", ";
+                    }
+                    break;
+                case BuildingStatus::CONSTRUCTION:
+                    str += "\nConstruction Effort: " + std::to_string(map_.selected_tile_ptr_->building_ptr_->effort_val_);
+                    str += " / " + std::to_string(map_.selected_tile_ptr_->building_ptr_->construction_effort_req_);
+                    break;
+                case BuildingStatus::READY:
+                    str += "\n Recipe " + to_full_string(map_.selected_tile_ptr_->building_ptr_->active_recipe_) + " Reqs: ";
+                    for (auto& item : map_.selected_tile_ptr_->building_ptr_->recipes_[map_.selected_tile_ptr_->building_ptr_->active_recipe_].inputs_){
+                        str += to_full_string(item.first);
+                        str += ": ";
+                        str += std::to_string(item.second);
+                        str += ", ";
+                    }
+                    break;
+                case BuildingStatus::OPERATING:
+                    str += "\n Recipe Progress: " + std::to_string(map_.selected_tile_ptr_->building_ptr_->effort_val_);
+                    str += " / " + std::to_string(map_.selected_tile_ptr_->building_ptr_->recipes_[map_.selected_tile_ptr_->building_ptr_->active_recipe_].effort_req_);
+                    break;
+            }
+
+        }
+    }
     
+    // draw the string
+    text.setFont(font);
+    text.setString(str);
+    text.setPosition(20, 130);
+    text.setCharacterSize(12); // pixels
+    text.setFillColor(sf::Color::White);
+    text.setStyle(sf::Text::Bold);
+    window.draw(text);
 
 }
 void GamePlay::update(double dt){
@@ -292,6 +465,50 @@ BitFlag GamePlay::handleInput(sf::Event& event){
                             worker->SetState(WorkerStates::GATHERIDLE);
                         }
                     }
+                    break;
+                case sf::Keyboard::Scan::C:
+                    std::cout << "Toggle constructing" << std::endl;
+                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
+                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+                            // set worker state to constructing
+                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+                            worker->SetState(WorkerStates::CONSTRUCTINGIDLE);
+                        }
+                    }
+                    break;
+                case sf::Keyboard::Scan::R:
+                    std::cout << "Toggle crafting" << std::endl;
+                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
+                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+                            // set worker state to crafting
+                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+                            worker->SetState(WorkerStates::CRAFTINGIDLE);
+                        }
+                    }
+                    break;
+                case sf::Keyboard::Scan::T:
+                    std::cout << "Transfer Inventory" << std::endl;
+                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
+                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+                            worker->TransferInventory();
+                        }
+                    }
+                    break;
+                case sf::Keyboard::Scan::Num1:{
+                    std::cout << "Build workspace" << std::endl;
+                    // get mouse position
+                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
+                    // create a workspace
+                    map_.MakeBuilding(BuildingTypes::WORKSPACE, viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
+                    break;}
+                case sf::Keyboard::Scan::Num2:{
+                    std::cout << "Build farm" << std::endl;
+                    // get mouse position
+                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
+                    // create a farm
+                    map_.MakeBuilding(BuildingTypes::FARM, viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
+                    break;}
                 default:
                     break;
             }
@@ -317,7 +534,7 @@ BitFlag GamePlay::handleInput(sf::Event& event){
             if (event.mouseButton.button == sf::Mouse::Left){
                 std::cout << "Left mouse button released" << std::endl;
                 // select a dynamic object
-                map_.SelectDynamicObject(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
+                map_.SelectObject(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
                 // print dynamic object details
                 for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
                     std::cout << "Selected dynamic object: " << dynamic_object_ptr->footprint_.x_ << ", " << dynamic_object_ptr->footprint_.y_ << std::endl;
@@ -516,64 +733,98 @@ void Map::SetHeight(int height){
 void Map::CreateTiles(){
     // create the tiles
     for (int i=0; i<width_; i++){
-        std::vector<Tile> tiles_array_row;
+        std::vector<std::shared_ptr<Tile>> tiles_array_row;
         for (int j=0; j<height_; j++){
-            Tile tile;
-            tile.x_ = i;
-            tile.y_ = j;
+            auto tile = std::make_shared<Tile>();
+            tile->x_ = i;
+            tile->y_ = j;
             tiles_array_row.push_back(tile);
         }
         tiles_array_.push_back(tiles_array_row);
     }
 }
-void Map::SetTile(int x, int y, Tile tile){
+void Map::SetTile(int x, int y, std::shared_ptr<Tile> tile){
     // set a tile on the map
     tiles_array_[x][y] = tile;
-    tiles_array_[x][y].x_ = x;
-    tiles_array_[x][y].y_ = y;
+    tiles_array_[x][y]->x_ = x;
+    tiles_array_[x][y]->y_ = y;
 }
 
-void Map::GetMapSlice(int x, int y, int width, int height){
-    // get a slice of the map
-    // TODO
-}
-std::map<ResourceTypes, std::shared_ptr<Resource>> Map::GetResourceSlice(Rect<double> rect){
+std::vector<std::shared_ptr<Tile>> Map::GetTileSlice(Rect<double> rect){
     // get a slice of the map
     int min_x = floor(rect.x_);
     int min_y = floor(rect.y_);
     int max_x = ceil(rect.x_ + rect.width_);
     int max_y = ceil(rect.y_ + rect.height_);
 
-    std::map<ResourceTypes, std::shared_ptr<Resource>> resources;
+    std::vector<std::shared_ptr<Tile>> tiles;
 
     // iterate from min to max x, y
     for(int x = min_x; x < max_x; x++){
         for(int y = min_y; y < max_y; y++){
-            Tile* tile;
-            tile = GetTile(x, y);
+            auto tile = GetTile(x, y);
             if (tile != nullptr){
-                // iterate through resources
-                for(auto& resource : tile->resource_map_){
-                    ResourceTypes resource_type = resource.second->resource_type_;
-                    resources[resource_type] = resource.second;
-                }
+                tiles.push_back(tile);
             }
+        }
+    }
+    return tiles;
+}
+std::map<ResourceTypes, std::shared_ptr<Resource>> Map::GetResourceSlice(Rect<double> rect){
+    std::map<ResourceTypes, std::shared_ptr<Resource>> resources;
+
+    // get a slice of the map
+    auto tiles = GetTileSlice(rect);
+
+    // iterate over tiles
+    for (auto& tile : tiles){
+        // iterate through resources
+        for(auto& resource : tile->resource_map_){
+            ResourceTypes resource_type = resource.second->resource_type_;
+            resources[resource_type] = resource.second;
         }
     }
     return resources;
 }
+std::map<BuildingTypes, std::shared_ptr<Building>> Map::GetBuildingSlice(Rect<double> rect){
+    std::map<BuildingTypes, std::shared_ptr<Building>> buildings;
 
-Tile* Map::GetTile(int x, int y){
+    // get a slice of the map
+    auto tiles = GetTileSlice(rect);
+
+    // iterate over tiles
+    for (auto& tile : tiles){
+        // iterate through resources
+        if (tile->building_type_ != BuildingTypes::NONE){
+            BuildingTypes building_type = tile->building_type_;
+            buildings[building_type] = tile->building_ptr_;
+        }
+    }
+    return buildings;
+}
+
+std::shared_ptr<Tile> Map::GetTile(int x, int y){
     // get a tile from the map
     // check x, y in bounds
     if (x < 0 || x >= width_ || y < 0 || y >= height_){
         return nullptr;
     } else {
-        return &tiles_array_[x][y];
+        return tiles_array_[x][y];
     }
 }
 void Map::update(double dt){
     // update the map
+    // update the buildings
+    for (int i=0; i<width_; i++){
+        for (int j=0; j<height_; j++){
+            // check if building
+            if (tiles_array_[i][j]->building_type_ != BuildingTypes::NONE){
+                // update the building
+                tiles_array_[i][j]->building_ptr_->update(dt);
+            }
+        }
+    }
+
     // update dynamic objects
     for (auto& dynamic_object_ptr : dynamic_object_ptrs_){
         dynamic_object_ptr->update(dt);
@@ -583,13 +834,41 @@ void Map::update(double dt){
             auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
             // update senses
             auto resources = GetResourceSlice(worker->GetImmediateSurroundingsRect());
+            auto buildings = GetBuildingSlice(worker->GetImmediateSurroundingsRect());
             worker->immediate_surroundings_.SetResource(resources);
+            worker->immediate_surroundings_.SetBuilding(buildings);
             resources = GetResourceSlice(worker->GetNearbySurroundingsRect());
+            buildings = GetBuildingSlice(worker->GetNearbySurroundingsRect());
             worker->nearby_surroundings_.SetResource(resources);
+            worker->nearby_surroundings_.SetBuilding(buildings);
+        }
+    }
+}
+void Map::SelectObject(double x, double y){
+    // keywords: selection, selectobject
+    // clear selected objects
+    selected_dynamic_object_ptrs_.clear();
+    selected_tile_ptr_ = nullptr;
+
+    // select an object
+    SelectDynamicObject(x, y);
+
+    // if no dynamic objects, get the tile
+    if (selected_dynamic_object_ptrs_.size() == 0){
+        // get tile int x, y
+        int tile_x = floor(x);
+        int tile_y = floor(y);
+        auto tile = GetTile(tile_x, tile_y);
+        // check if tile is nullptr
+        if (tile == nullptr){
+            return;
+        } else {
+            selected_tile_ptr_ = std::shared_ptr<Tile>(tile);
         }
     }
 }
 void Map::SelectDynamicObject(double x, double y){
+    // keywords: selection, selectobject
     // select a dynamic object
     // TODO: put dynamic objects into a quadtree
     // clear selected dynamic objects
@@ -602,6 +881,28 @@ void Map::SelectDynamicObject(double x, double y){
             selected_dynamic_object_ptrs_.push_back(dynamic_object_ptr);
         }
     }
+}
+void Map::MakeBuilding(BuildingTypes building_type, double x, double y){
+    // make a building
+    // get tile int x, y
+    int tile_x = floor(x);
+    int tile_y = floor(y);
+    auto tile = GetTile(tile_x, tile_y);
+    // check if tile is nullptr
+    if (tile == nullptr){
+        return;
+    }
+    // check if tile has building
+    if (tile->building_type_ != BuildingTypes::NONE){
+        return;
+    }
+
+    // make building using the factory
+    tile->building_type_ = building_type;
+    tile->building_ptr_ = std::make_shared<Building>(BuildingFactory::MakeBuilding(building_type));
+    
+    // Debug printout
+    std::cout << "Building created: " << to_string(building_type) << " at: " << tile_x << ", " << tile_y << std::endl;
 }
 /////////////////////////////////////// End Map ///////////////////////////////////////
 
@@ -658,15 +959,52 @@ bool DynamicObject::PointInFootprint(double x, double y){
 /////////////////////////////////////// End DynamicObject ///////////////////////////////////////
 
 /////////////////////////////////////// Worker ///////////////////////////////////////
+Worker::Worker(){
+    SetDynamicObjectType(DynamicObjectTypes::WORKER);
+
+    // make skills
+    // TODO: iterate over enum class properly
+    for (int i=0; i<(int)SkillTypes::END_OF_ENUM_VAL; i++){
+        skill_map_[(SkillTypes)i] = Skill((SkillTypes)i);
+    }
+}
 void Worker::update(double dt){
     // update the worker
     inherited::update(dt);
+
+    // update needs
+    for (auto& need : needs_map_){
+        need.second.update(dt);
+    }
 
     // AI
     AI(dt);
 }
 void Worker::AI(double dt){
     // AI for the worker
+    // first check if any needs are critical
+    for (auto& need : needs_map_){
+        if (need.second.IsCritical()){
+            // TODO
+        }
+    }
+    // next check if any needs are auto-fulfillable
+    for (auto& need : needs_map_){
+        if (need.second.IsAutoFulfillable()){
+            switch (need.second.need_type_){
+                case NeedsTypes::FOOD:
+                    Eat();
+                    break;
+                case NeedsTypes::SLEEP:
+                    // TODO
+                    break;
+                case NeedsTypes::WATER:
+                    // TODO
+                    break;
+            }
+        }
+    }
+
     // clear actions
     switch (worker_state_){
         case WorkerStates::IDLE:
@@ -684,8 +1022,21 @@ void Worker::AI(double dt){
             // gather resources
             Gather(dt);
             break;
-        case WorkerStates::BUILDING:
-            // build
+        case WorkerStates::CONSTRUCTINGIDLE:
+            // construct buildings
+            Construct(dt);
+            break;
+        case WorkerStates::CONSTRUCTING:
+            // constructing
+            Construct(dt);
+            break;
+        case WorkerStates::CRAFTINGIDLE:
+            // crafting
+            Craft(dt);
+            break;
+        case WorkerStates::CRAFTING:
+            // crafting
+            Craft(dt);
             break;
     }
 }
@@ -694,7 +1045,7 @@ void Worker::SetGoal(double x, double y){
     goal_.x_ = x;
     goal_.y_ = y;
 }
-void Worker::AddToInventory(ResourceTypes itemType, double amount){
+void Worker::AddToInventory(ItemTypes itemType, double amount){
     // add to the inventory
     // check if itemType in inventory_map_
     if (inventory_map_.find(itemType) != inventory_map_.end()){
@@ -702,7 +1053,7 @@ void Worker::AddToInventory(ResourceTypes itemType, double amount){
         inventory_map_[itemType].AddAmount(amount);
     } else {
         // add the resource
-        inventory_map_[itemType] = ResourceItem(itemType, amount);
+        inventory_map_[itemType] = *ItemFactory::MakeItem(itemType, amount);
     }
 }
 Rect<double> Worker::GetImmediateSurroundingsRect(){
@@ -753,12 +1104,12 @@ void Worker::MoveTowardsGoal(){
 void Worker::Gather(double dt){
     // gather resources
 
-    // if not gathering, decide which resource to gather and set gather_time_ to zero
+    // if not gathering, decide which resource to gather and set action_time_ to zero
     // get first resource in immediatesurroundings
     if (worker_state_ == WorkerStates::GATHERIDLE){
         if (immediate_surroundings_.resources_.size() > 0){
-            gather_resource_ptr_ = immediate_surroundings_.resources_.begin()->second;
-            gather_time_ = 0.0;
+            selected_resource_ptr_ = immediate_surroundings_.resources_.begin()->second;
+            action_time_ = 0.0;
             SetState(WorkerStates::GATHERING);
         } else {
             // nothing close enough to gather
@@ -769,35 +1120,244 @@ void Worker::Gather(double dt){
     }
 
     // update gather time
-    gather_time_ += dt;
+    action_time_ += dt;
 
     // check if gather time is greater than resource time_to_gather_
-    if (gather_time_ > gather_resource_ptr_->time_to_gather_){
-        // get min of GetTotal & yield_per_gather_
-        double amount = std::min(gather_resource_ptr_->GetTotal(), gather_resource_ptr_->yield_per_gather_);
+    if (action_time_ > selected_resource_ptr_->time_to_gather_){
+        // convert resource to item type
+        ResourceTypes resource_type = selected_resource_ptr_->resource_type_;
+        ItemTypes item_type = (ItemTypes)resource_type;
+
+        auto amount = selected_resource_ptr_->Extract();
 
         // add resource to inventory
-        AddToInventory(gather_resource_ptr_->resource_type_, amount);
-        // remove resource from tile
-        gather_resource_ptr_->RemoveTotal(amount);
-        // check if resource is empty
-        if (gather_resource_ptr_->GetTotal() <= 0){
-            // remove resource from tile
-            gather_resource_ptr_->RemoveTotal(gather_resource_ptr_->GetTotal());
-            // remove resource from immediate surroundings
-            immediate_surroundings_.resources_.erase(gather_resource_ptr_->resource_type_);
-        }
+        AddToInventory(item_type, amount);
+        
         // set gather time to zero
-        gather_time_ = 0.0;
+        action_time_ = 0.0;
 
         // check if resource is exhausted
-        if (gather_resource_ptr_->GetTotal() <= 0){
+        if (selected_resource_ptr_->GetTotal() <= 0){
             // set state to GATHERIDLE
             SetState(WorkerStates::GATHERIDLE);
         }
     }
+}
+void Worker::Construct(double dt){
+    // construct buildings
 
+    // if not constructing, decide which building to construct and set action_time_ to zero
+    // get first building in immediatesurroundings
+    if (worker_state_ == WorkerStates::CONSTRUCTINGIDLE){
+        // iterate over buildings in immediate surroundings
+        for (auto& building : immediate_surroundings_.buildings_){
+            // check if building is ready
+            if (building.second->building_status_ == BuildingStatus::PRECONSTRUCTION || building.second->building_status_ == BuildingStatus::CONSTRUCTION){
+                // set building to construct
+                selected_building_ptr_ = building.second;
+                action_time_ = 0.0;
+                SetState(WorkerStates::CONSTRUCTING);
+                break;
+            }
+        }
 
+        if (worker_state_ == WorkerStates::CONSTRUCTINGIDLE){
+            // nothing close enough to construct
+            std::cout << "Nothing close enough to construct" << std::endl;
+            SetState(WorkerStates::IDLE);
+            return;
+        }
+    }
 
+    // switch case on building status
+    switch (selected_building_ptr_->building_status_){
+        case BuildingStatus::PRECONSTRUCTION:
+            // transfer required items from inventory to building
+            for (auto& item : selected_building_ptr_->item_reqs_map_){
+                // check if item in inventory
+                if (inventory_map_.find(item.first) != inventory_map_.end()){
+                    // amount to transfer
+                    auto amount = std::min(item.second, inventory_map_[item.first].GetAmount());
+
+                    // remove from inventory
+                    inventory_map_[item.first].RemoveAmount(amount);
+                    // add to building
+                    selected_building_ptr_->AddToInventory(item.first, item.second);
+                }
+            }
+            break;
+        case BuildingStatus::CONSTRUCTION:
+            // update construction effort
+            selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CONSTRUCTION].CalcEffortUnits();
+            break;
+        case BuildingStatus::OPERATING:
+            // add to effort val
+            selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CRAFTING].CalcEffortUnits();
+        default:
+            SetState(WorkerStates::CONSTRUCTINGIDLE);
+            break;
+    }
+}
+void Worker::Craft(double dt){
+    // craft items
+
+    // TODO: check if worker is close enough to selected_building_ptr_
+
+    // TODO: move worker towards selected_building_ptr_ if not close enough
+    
+    // check if selected building is operating
+    if (selected_building_ptr_->building_status_ != BuildingStatus::OPERATING){
+        // set state to CRAFTINGIDLE
+        SetState(WorkerStates::CRAFTINGIDLE);
+        return;
+    } else {
+        // add to effort val
+        selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CRAFTING].CalcEffortUnits();
+    }
+}
+void Worker::TransferItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr){
+    // transfer item to building
+    double amount_to_transfer = 0.0;
+    // check if item in inventory
+    if (inventory_map_.find(item_type) != inventory_map_.end()){
+        // check if amount in inventory is greater than required
+        amount_to_transfer = std::min(amount_request, inventory_map_[item_type].GetAmount());
+    } else {
+        return;
+    }
+    // add to building
+    building_ptr->AddToInventory(item_type, amount_to_transfer);
+    // remove from inventory
+    inventory_map_[item_type].RemoveAmount(amount_to_transfer);
+}
+void Worker::TransferInventory(){
+    // Smart transfer inventory to building based on context
+    // check if building is nullptr
+    if (selected_building_ptr_ == nullptr){
+        return;
+    }
+
+    // check if selected building has a recipe
+    if (selected_building_ptr_->active_recipe_ != RecipeTypes::NONE){
+        // iterate over inputs
+        for (auto& input : selected_building_ptr_->recipes_[selected_building_ptr_->active_recipe_].inputs_){
+            // transfer item
+            TransferItem(input.first, input.second, selected_building_ptr_);
+        }
+    } else {
+        // iterate over inventory
+        for (auto& item : inventory_map_){
+            // transfer item
+            TransferItem(item.first, item.second.GetAmount(), selected_building_ptr_);
+        }
+    }
+}
+void Worker::Eat(){
+    // iterate over inventory, find first item with item_category_ == ItemCategories::FOOD, then remove it from inventory and increase need value
+    for (auto& item : inventory_map_){
+        if (item.second.item_category_ == ItemCategories::FOOD){
+            auto food = (FoodItem*)(&(item.second));
+            // get amount to eat, protection against negative value
+            double amount_to_eat = std::min(1.0, inventory_map_[item.first].GetAmount());
+            needs_map_[NeedsTypes::FOOD].val_ += amount_to_eat * food->nutrient_amount_;
+            // subtract from inventory
+            inventory_map_[item.first].RemoveAmount(amount_to_eat);
+            return;
+        }
+    }
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////
+
+/////////////////////////////////////// Building ///////////////////////////////////////
+void Building::update(double dt){
+    // update the building
+    // update the building status
+    switch (building_status_){
+        case BuildingStatus::PRECONSTRUCTION:{
+            // iterate through item_reqs_map_
+            bool all_reqs_fulfilled = true;
+            for (auto& item: item_reqs_map_){
+                double reqd_amount = item.second;
+                // check if item in inventory
+                if (inventory_map_.find(item.first) != inventory_map_.end()){
+                    // check if amount in inventory is greater than required
+                    if (inventory_map_[item.first] < reqd_amount){
+                        all_reqs_fulfilled = false;
+                    }
+                } else {
+                    all_reqs_fulfilled = false;
+                }
+            }
+            
+            if (all_reqs_fulfilled){
+                // remote required items from inventory
+                for (auto& item : item_reqs_map_){
+                    double reqd_amount = item.second;
+                    // remove from inventory
+                    AddToInventory(item.first, -reqd_amount);
+                }
+                // set building status to construction
+                building_status_ = BuildingStatus::CONSTRUCTION;
+            }
+            break;}
+        case BuildingStatus::CONSTRUCTION:
+            // check if construction effort is greater than construction time
+            if (effort_val_ > construction_effort_req_){
+                // set building status to complete
+                building_status_ = BuildingStatus::READY;
+                effort_val_ = 0.0;
+            }
+            break;
+        case BuildingStatus::READY:{
+            // check if all items of the active recipe are fulfilled
+            bool all_reqs_fulfilled = true;
+            for (auto& input: recipes_[active_recipe_].inputs_){
+                double reqd_amount = input.second;
+                // check if item in inventory
+                if (inventory_map_.find(input.first) != inventory_map_.end()){
+                    // check if amount in inventory is greater than required
+                    if (inventory_map_[input.first] < reqd_amount){
+                        all_reqs_fulfilled = false;
+                    }
+                } else {
+                    all_reqs_fulfilled = false;
+                }
+            }
+            if (all_reqs_fulfilled){
+                // remove required items from inventory
+                for (auto& input : recipes_[active_recipe_].inputs_){
+                    double reqd_amount = input.second;
+                    // remove from inventory
+                    AddToInventory(input.first, -reqd_amount);
+                }
+                // set building status to operating
+                building_status_ = BuildingStatus::OPERATING;
+            }
+            break;}
+        case BuildingStatus::OPERATING:
+            if (effort_val_ > recipes_[active_recipe_].effort_req_){
+                // add outputs to inventory
+                for (auto& output : recipes_[active_recipe_].outputs_){
+                    // add to inventory
+                    AddToInventory(output.first, output.second);
+                }
+                // set effort val to zero
+                effort_val_ = 0.0;
+                building_status_ = BuildingStatus::READY;
+            }
+        default:
+            break;
+    }
+}
+void Building::AddToInventory(ItemTypes item_type, double amount){
+    // add to the storage
+    // check if item_type in inventory_map_
+    if (inventory_map_.find(item_type) != inventory_map_.end()){
+        // add to the resource
+        inventory_map_[item_type] += amount;
+    } else {
+        // add the resource
+        inventory_map_[item_type] = amount;
+    }
+}
+/////////////////////////////////////// End Building ///////////////////////////////////////
