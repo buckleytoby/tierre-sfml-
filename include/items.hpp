@@ -11,11 +11,17 @@
 enum class ItemCategories {
     NONE,
     RESOURCE,
-    FOOD,  
+    FOOD,
+    TOOL,
 };
+// note: if an item is category NONE, then we don't have to make an explicit class for it, it'll just use the default Item class.
 enum class ItemTypes {
     NONE,
+    CORNSTALK,
     CORNSEED,
+    PLANTFIBER,
+    PLANTROPE,
+    WOODRAFT,
 
     // copy paste from ResourceTypes
     LUMBER = 128,

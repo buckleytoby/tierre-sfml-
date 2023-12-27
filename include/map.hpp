@@ -27,6 +27,7 @@ class Map {
         void SelectObject(double x, double y);
         void SelectDynamicObject(double x, double y);
         void MakeBuilding(BuildingTypes building_type, double x, double y);
+        void MakeWorker(double x, double y);
 };
 
 #endif // MAP_HPP

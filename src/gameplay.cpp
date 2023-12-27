@@ -117,8 +117,8 @@ const std::string to_full_string(RecipeTypes p){
     switch(p)
     {
         case RecipeTypes::NONE: return "";
-        case RecipeTypes::CORNSEED: return "Corn Seed";
-        case RecipeTypes::CORN: return "Corn";
+        case RecipeTypes::PROCESSCORNSTALK: return "Process Cornstalk";
+        case RecipeTypes::FARMCORN: return "Farm Corn";
     }
     return ""; // or an empty string
 }
@@ -531,6 +531,13 @@ BitFlag GamePlay::handleInput(sf::Event& event){
                     // create a farm
                     map_.MakeBuilding(BuildingTypes::FARM, viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
                     break;}
+                case sf::Keyboard::Scan::Num0:{
+                    std::cout << "Make worker" << std::endl;
+                    // get mouse position
+                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
+                    // create a worker
+                    map_.MakeWorker(viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
+                    break;}
                 default:
                     break;
             }
@@ -921,7 +928,7 @@ void Map::MakeBuilding(BuildingTypes building_type, double x, double y){
 
     // make building using the factory
     tile->building_type_ = building_type;
-    tile->building_ptr_ = std::make_shared<Building>(BuildingFactory::MakeBuilding(building_type));
+    tile->building_ptr_ = BuildingFactory::MakeBuilding(building_type);
     // set the footprint x, y
     tile->building_ptr_->footprint_.x_ = tile_x;
     tile->building_ptr_->footprint_.y_ = tile_y;
@@ -930,6 +937,15 @@ void Map::MakeBuilding(BuildingTypes building_type, double x, double y){
     
     // Debug printout
     std::cout << "Building created: " << to_string(building_type) << " at: " << tile_x << ", " << tile_y << std::endl;
+}
+void Map::MakeWorker(double x, double y){
+    // make worker
+    auto worker = std::make_shared<Worker>();
+    worker->footprint_.x_ = x;
+    worker->footprint_.y_ = y;
+    worker->SetSpeed(1);
+    worker->needs_map_[NeedsTypes::FOOD].val_ = 100.0;
+    dynamic_object_ptrs_.push_back(worker);
 }
 /////////////////////////////////////// End Map ///////////////////////////////////////
 

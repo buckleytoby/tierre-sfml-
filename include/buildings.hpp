@@ -8,6 +8,7 @@
 enum class BuildingTypes {
     NONE,
     WORKSPACE, // simplest workspace
+    STORAGESPACE, // simplest storage
     FARM,
 };
 
@@ -41,13 +42,26 @@ class Building {
 class Workspace : public Building
 {
     public:
+        const static inline std::map<RecipeTypes, Recipe> recipes_{
+            {RecipeTypes::PROCESSCORNSTALK, ProcessCornstalk()}
+        };
+
         Workspace(){
             building_type_ = BuildingTypes::WORKSPACE;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
             construction_effort_req_ = 3.0;
-            recipes_[RecipeTypes::CORNSEED] = CornSeedRecipe(); // TODO: right now this is wasteful since recipes don't change no matter the building, so would be more efficient to have a global recipe map
-            active_recipe_ = RecipeTypes::CORNSEED;
+            active_recipe_ = RecipeTypes::PROCESSCORNSTALK;
+        }
+};
+class Storagespace : public Building
+{
+    public:
+        Storagespace(){
+            building_type_ = BuildingTypes::STORAGESPACE;
+            building_status_ = BuildingStatus::PRECONSTRUCTION;
+            level_ = 0;
+            construction_effort_req_ = 3.0;
         }
 };
 class Farm : public Building
@@ -57,26 +71,29 @@ class Farm : public Building
             building_type_ = BuildingTypes::FARM;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
-            construction_effort_req_ = 5.0;
-            recipes_[RecipeTypes::CORN] = CornRecipe();
-            active_recipe_ = RecipeTypes::CORN;
+            construction_effort_req_ = 30.0;
+            recipes_[RecipeTypes::FARMCORN] = FarmCorn();
+            active_recipe_ = RecipeTypes::FARMCORN;
         }
 };
 
 class BuildingFactory
 {
     public:
-        static Building MakeBuilding(BuildingTypes building_type){
+        static std::shared_ptr<Building> MakeBuilding(BuildingTypes building_type){
             switch (building_type)
             {
                 case BuildingTypes::WORKSPACE:
-                    return Workspace();
+                    return std::shared_ptr<Workspace>();
+                    break;
+                case BuildingTypes::STORAGESPACE:
+                    return std::shared_ptr<Storagespace>();
                     break;
                 case BuildingTypes::FARM:
-                    return Farm();
+                    return std::shared_ptr<Farm>();
                     break;
                 default:
-                    return Building();
+                    return std::shared_ptr<Building>();
                     break;
             }
         }
