@@ -50,6 +50,7 @@ const std::string to_string(ItemTypes p){
 const std::string to_string(WorkerStates p){
   switch(p)
   {
+    case WorkerStates::DEAD: return "dead";
     case WorkerStates::IDLE: return "idle";
     case WorkerStates::MOVING: return "moving";
     case WorkerStates::GATHERIDLE: return "gatheridle";
@@ -176,7 +177,7 @@ GamePlay::GamePlay(){
     worker->SetSpeed(1);
     worker->needs_map_[NeedsTypes::FOOD].val_ = 60.0;
     // give worker starting inventory of corn
-    worker->AddToInventory(ItemTypes::CORN, 10);
+    worker->AddToInventory(ItemTypes::CORN, 2);
 
     map_.dynamic_object_ptrs_.push_back(std::unique_ptr<DynamicObject>((DynamicObject*)worker));
 
@@ -292,10 +293,10 @@ void GamePlay::draw(sf::RenderWindow& window){
             str += "Worker";
             // add inventory
             str += "\nInventory: ";
-            for (auto& item : worker->inventory_map_){
+            for (auto& item : worker->GetInventoryMap()){
                 str += to_full_string(item.first);
                 str += ": ";
-                str += std::to_string(item.second.GetAmount());
+                str += std::to_string(item.second->GetAmount());
                 str += ", ";
             }
             // add state
@@ -975,6 +976,15 @@ void Worker::update(double dt){
     // update needs
     for (auto& need : needs_map_){
         need.second.update(dt);
+        
+        // need-specific switch case
+        switch (need.first) {
+            case NeedsTypes::FOOD:
+                if (need.second.IsZero()){
+                    // ded
+                    SetState(WorkerStates::DEAD);
+                }
+        }
     }
 
     // AI
@@ -1007,6 +1017,9 @@ void Worker::AI(double dt){
 
     // clear actions
     switch (worker_state_){
+        case WorkerStates::DEAD:
+            // do nothing, it's dead
+            break;
         case WorkerStates::IDLE:
             // do nothing
             break;
@@ -1044,17 +1057,6 @@ void Worker::SetGoal(double x, double y){
     // set the goal for the worker
     goal_.x_ = x;
     goal_.y_ = y;
-}
-void Worker::AddToInventory(ItemTypes itemType, double amount){
-    // add to the inventory
-    // check if itemType in inventory_map_
-    if (inventory_map_.find(itemType) != inventory_map_.end()){
-        // add to the resource
-        inventory_map_[itemType].AddAmount(amount);
-    } else {
-        // add the resource
-        inventory_map_[itemType] = *ItemFactory::MakeItem(itemType, amount);
-    }
 }
 Rect<double> Worker::GetImmediateSurroundingsRect(){
     // get the immediate surroundings rect
@@ -1175,12 +1177,12 @@ void Worker::Construct(double dt){
             // transfer required items from inventory to building
             for (auto& item : selected_building_ptr_->item_reqs_map_){
                 // check if item in inventory
-                if (inventory_map_.find(item.first) != inventory_map_.end()){
+                if (inventory_.find(item.first)){
                     // amount to transfer
-                    auto amount = std::min(item.second, inventory_map_[item.first].GetAmount());
+                    auto amount = std::min(item.second, inventory_.GetItem(item.first)->GetAmount());
 
                     // remove from inventory
-                    inventory_map_[item.first].RemoveAmount(amount);
+                    inventory_.GetItem(item.first)->RemoveAmount(amount);
                     // add to building
                     selected_building_ptr_->AddToInventory(item.first, item.second);
                 }
@@ -1219,16 +1221,16 @@ void Worker::TransferItem(ItemTypes item_type, double amount_request, std::share
     // transfer item to building
     double amount_to_transfer = 0.0;
     // check if item in inventory
-    if (inventory_map_.find(item_type) != inventory_map_.end()){
+    if (inventory_.find(item_type)){
         // check if amount in inventory is greater than required
-        amount_to_transfer = std::min(amount_request, inventory_map_[item_type].GetAmount());
+        amount_to_transfer = std::min(amount_request, inventory_.GetItem(item_type)->GetAmount());
     } else {
         return;
     }
     // add to building
     building_ptr->AddToInventory(item_type, amount_to_transfer);
     // remove from inventory
-    inventory_map_[item_type].RemoveAmount(amount_to_transfer);
+    inventory_.GetItem(item_type)->RemoveAmount(amount_to_transfer);
 }
 void Worker::TransferInventory(){
     // Smart transfer inventory to building based on context
@@ -1246,22 +1248,22 @@ void Worker::TransferInventory(){
         }
     } else {
         // iterate over inventory
-        for (auto& item : inventory_map_){
+        for (auto& item : inventory_.GetItemMap()){
             // transfer item
-            TransferItem(item.first, item.second.GetAmount(), selected_building_ptr_);
+            TransferItem(item.first, item.second->GetAmount(), selected_building_ptr_);
         }
     }
 }
 void Worker::Eat(){
     // iterate over inventory, find first item with item_category_ == ItemCategories::FOOD, then remove it from inventory and increase need value
-    for (auto& item : inventory_map_){
-        if (item.second.item_category_ == ItemCategories::FOOD){
-            auto food = (FoodItem*)(&(item.second));
+    for (auto& item : inventory_.GetItemMap()){
+        if (item.second->IsItemCategory(ItemCategories::FOOD)){
+            auto food = std::static_pointer_cast<FoodItem>(item.second);
             // get amount to eat, protection against negative value
-            double amount_to_eat = std::min(1.0, inventory_map_[item.first].GetAmount());
+            double amount_to_eat = std::min(1.0, item.second->GetAmount());
             needs_map_[NeedsTypes::FOOD].val_ += amount_to_eat * food->nutrient_amount_;
             // subtract from inventory
-            inventory_map_[item.first].RemoveAmount(amount_to_eat);
+            item.second->RemoveAmount(amount_to_eat);
             return;
         }
     }

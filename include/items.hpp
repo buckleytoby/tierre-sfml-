@@ -46,7 +46,10 @@ class Item
         void RemoveAmount(double amount){
             SetAmount(amount_ - amount);
             }
+        bool IsItemCategory(ItemCategories item_category){return item_category == item_category_;}
 };
+using ItemPtr = std::shared_ptr<Item>;
+using ItemMap = std::map<ItemTypes, ItemPtr>;
 
 class ResourceItem: public Item
 {
@@ -85,6 +88,25 @@ class ItemFactory
                     break;
             }
         }
+};
+
+class Inventory
+{
+    public:
+        ItemMap inventory_map_;
+        
+        ItemMap GetItemMap(){return inventory_map_;}
+        ItemPtr GetItem(ItemTypes type){return inventory_map_[type];}
+        bool find(ItemTypes itemType){return inventory_map_.find(itemType) != inventory_map_.end();}
+        void AddToInventory(ItemTypes itemType, double amount){
+            if (find(itemType)){
+                GetItem(itemType)->AddAmount(amount);
+            } else {
+                inventory_map_[itemType] = ItemFactory::MakeItem(itemType, amount);
+            }
+        }
+        void RemoveFromInventory(ItemTypes itemType);
+
 };
 
 #endif // ITEMS_HPP

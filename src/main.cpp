@@ -28,7 +28,7 @@ int main()
         {ResourceTypes::CORN, ItemTypes::CORN},
     };
 
-    auto window = sf::RenderWindow{ { 1920u, 1080u }, "CMake SFML Project"};
+    auto window = sf::RenderWindow{ { 1920u, 1080u }, "Terre"};
     window.setFramerateLimit(FRAMERATE);
     window.setVerticalSyncEnabled(true); // call it once, after creating the gamescreen
 

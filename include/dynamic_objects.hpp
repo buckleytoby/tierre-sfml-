@@ -58,6 +58,7 @@ class DynamicObject
 };
 
 enum class WorkerStates{
+    DEAD,
     IDLE,
     MOVING,
     GATHERING,
@@ -82,9 +83,12 @@ class Need
         double deterioration_rate_{0.1}; // per second
         double danger_level_{10.0}; // at this level the worker will prioritize this need over all else
         double auto_fulfill_level_{25.0}; // at this level the worker will automatically fulfill this need if they can
-        void update(double dt){val_ -= deterioration_rate_ * dt;}
+        void update(double dt){
+            double new_val = std::max(0.0, val_ - deterioration_rate_ * dt);
+            val_ = new_val;}
         bool IsCritical(){return val_ < danger_level_;}
         bool IsAutoFulfillable(){return val_ < auto_fulfill_level_;}
+        bool IsZero(){return val_ <= 0.0;}
 };
 
 class FoodNeed : public Need
@@ -99,7 +103,7 @@ class Worker : public DynamicObject
         using inherited = DynamicObject;
     public:
         WorkerStates worker_state_{WorkerStates::IDLE};
-        std::map<ItemTypes, Item> inventory_map_;
+        Inventory inventory_;
         std::map<SkillTypes, Skill> skill_map_;
         std::map<NeedsTypes, Need> needs_map_{
             {NeedsTypes::FOOD, FoodNeed()}
@@ -119,10 +123,12 @@ class Worker : public DynamicObject
         void AI(double dt);
         void SetGoal(double x, double y);
         void SetState(WorkerStates worker_state){worker_state_ = worker_state;}
-        void AddToInventory(ItemTypes itemType, double amount);
-        void RemoveFromInventory(ItemTypes itemType);
         Rect<double> GetImmediateSurroundingsRect();
         Rect<double> GetNearbySurroundingsRect();
+
+        // Passthroughs
+        void AddToInventory(ItemTypes type, double amount){inventory_.AddToInventory(type, amount);}
+        ItemMap GetInventoryMap(){return inventory_.GetItemMap();}
 
         // medium lvl actions
         void MoveTowardsGoal();
