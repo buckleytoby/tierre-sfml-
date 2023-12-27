@@ -6,6 +6,8 @@
 #include "BitWise.hpp"
 #include <memory>
 #include <map>
+#include <functional>
+
 #include "resources.hpp"
 #include "skills.hpp"
 #include "senses.hpp"
@@ -55,11 +57,14 @@ class DynamicObject
         void SetSpeed(double speed);
         void SetDynamicObjectType(DynamicObjectTypes dynamic_object_type){dynamic_object_type_ = dynamic_object_type;}
         bool PointInFootprint(double x, double y);
+        void ResetDynamicObjectActions(){dynamic_object_actions_.ClearFlag();}
 };
 
 enum class WorkerStates{
     DEAD,
     IDLE,
+    ACTIVE,
+    EXECUTINGTASK,
     MOVING,
     GATHERING,
     GATHERIDLE,
@@ -94,7 +99,7 @@ class Need
 class FoodNeed : public Need
 {
     public:
-        FoodNeed(){need_type_ = NeedsTypes::FOOD; val_ = 100.0; deterioration_rate_ = 5.0; auto_fulfill_level_ = 50.0;}
+        FoodNeed(){need_type_ = NeedsTypes::FOOD; val_ = 100.0; deterioration_rate_ = 0.5; auto_fulfill_level_ = 50.0;}
 };
 
 class Worker : public DynamicObject
@@ -122,15 +127,21 @@ class Worker : public DynamicObject
         void update(double dt);
         void AI(double dt);
         void SetGoal(double x, double y);
-        void SetState(WorkerStates worker_state){worker_state_ = worker_state;}
+        void SetState(WorkerStates worker_state);
+        XY<double> GetCenter(){return XY<double>{footprint_.x_ + footprint_.width_ / 2.0, footprint_.y_ + footprint_.height_ / 2.0};}
         Rect<double> GetImmediateSurroundingsRect();
         Rect<double> GetNearbySurroundingsRect();
+        void Die();
+        bool CheckState(WorkerStates worker_state){return worker_state_ == worker_state;}
 
         // Passthroughs
         void AddToInventory(ItemTypes type, double amount){inventory_.AddToInventory(type, amount);}
         ItemMap GetInventoryMap(){return inventory_.GetItemMap();}
 
-        // medium lvl actions
+        // Action Primitives
+        void SelectBuilding(std::shared_ptr<Building> building_ptr);
+        void SelectClosestBuilding();
+        void SetGoalToSelectedBuilding();
         void MoveTowardsGoal();
         void Gather(double dt);
         void Construct(double dt);
@@ -140,6 +151,23 @@ class Worker : public DynamicObject
         void TakeItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr);
         void TakeInventory();
         void Eat();
+        // Action primitive map
+        std::map<std::string, std::function<void()>> action_primitive_map_{
+            {"SelectClosestBuilding", std::bind(&Worker::SelectClosestBuilding, this)},
+            {"SetGoalToSelectedBuilding", std::bind(&Worker::SetGoalToSelectedBuilding, this)},
+            {"MoveTowardsGoal", std::bind(&Worker::MoveTowardsGoal, this)},
+            {"TransferInventory", std::bind(&Worker::TransferInventory, this)},
+        };
+
+        // Pre-built test scripts
+        void TransferInventoryToClosestBuilding(double dt);
+        void GatherAndStoreLumber(double dt);
+
+        // Task Manager bookkeeping variables
+        std::function<void(double)> active_script_fcn_ = std::bind(&Worker::TransferInventoryToClosestBuilding, this, std::placeholders::_1);
+        int task_current_step_{0};
+        std::vector<std::string> task_steps_ = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
+        std::vector<WorkerStates> task_start_states = {WorkerStates::ACTIVE, WorkerStates::ACTIVE, WorkerStates::MOVING, WorkerStates::ACTIVE};
 };
 
 #endif // DYNAMIC_OBJECTS_HPP

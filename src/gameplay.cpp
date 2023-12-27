@@ -52,6 +52,7 @@ const std::string to_string(WorkerStates p){
   {
     case WorkerStates::DEAD: return "dead";
     case WorkerStates::IDLE: return "idle";
+    case WorkerStates::EXECUTINGTASK: return "executing task";
     case WorkerStates::MOVING: return "moving";
     case WorkerStates::GATHERIDLE: return "gatheridle";
     case WorkerStates::GATHERING: return "gathering";
@@ -60,6 +61,7 @@ const std::string to_string(WorkerStates p){
   }
   return ""; // or an empty string
 }
+const std::string to_full_string(WorkerStates p){return to_string(p);}
 const std::string to_string(NeedsTypes p){
   switch(p)
   {
@@ -175,7 +177,7 @@ GamePlay::GamePlay(){
     worker->SetX(5);
     worker->SetY(5);
     worker->SetSpeed(1);
-    worker->needs_map_[NeedsTypes::FOOD].val_ = 60.0;
+    worker->needs_map_[NeedsTypes::FOOD].val_ = 100.0;
     // give worker starting inventory of corn
     worker->AddToInventory(ItemTypes::CORN, 2);
 
@@ -306,6 +308,16 @@ void GamePlay::draw(sf::RenderWindow& window){
             if (worker->worker_state_ == WorkerStates::GATHERING){
                 str += "\nGathering " + to_full_name(worker->selected_resource_ptr_->resource_type_) + " Progress: ";
                 str += std::to_string(worker->action_time_) + " / " + std::to_string(worker->selected_resource_ptr_->time_to_gather_);
+            }
+            // if executing task, add task progress
+            else if (worker->worker_state_ == WorkerStates::EXECUTINGTASK){
+                str += "\nExecuting Task Progress: \n";
+                for (int i=0; i<worker->task_steps_.size(); i++){
+                    if (i == worker->task_current_step_){
+                        str += ">> ";
+                    }
+                    str += worker->task_steps_[i] + "\n";
+                }
             }
             // add needs
             str += "\nNeeds: ";
@@ -493,6 +505,15 @@ BitFlag GamePlay::handleInput(sf::Event& event){
                         if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
                             auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
                             worker->TransferInventory();
+                        }
+                    }
+                    break;
+                case sf::Keyboard::Scan::E:
+                    std::cout <<"Execute Task" << std::endl;
+                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
+                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+                            worker->SetState(WorkerStates::EXECUTINGTASK);
                         }
                     }
                     break;
@@ -901,6 +922,11 @@ void Map::MakeBuilding(BuildingTypes building_type, double x, double y){
     // make building using the factory
     tile->building_type_ = building_type;
     tile->building_ptr_ = std::make_shared<Building>(BuildingFactory::MakeBuilding(building_type));
+    // set the footprint x, y
+    tile->building_ptr_->footprint_.x_ = tile_x;
+    tile->building_ptr_->footprint_.y_ = tile_y;
+    tile->building_ptr_->center_.x_ = tile_x + 0.5;
+    tile->building_ptr_->center_.y_ = tile_y + 0.5;
     
     // Debug printout
     std::cout << "Building created: " << to_string(building_type) << " at: " << tile_x << ", " << tile_y << std::endl;
@@ -969,8 +995,17 @@ Worker::Worker(){
         skill_map_[(SkillTypes)i] = Skill((SkillTypes)i);
     }
 }
+void Worker::Die(){
+    dynamic_object_actions_.ClearFlag();
+    SetState(WorkerStates::DEAD);
+}
 void Worker::update(double dt){
-    // update the worker
+    // check if dead
+    if (worker_state_ == WorkerStates::DEAD){
+        return;
+    }
+
+    // update the worker (this is where movement actually happens)
     inherited::update(dt);
 
     // update needs
@@ -982,7 +1017,7 @@ void Worker::update(double dt){
             case NeedsTypes::FOOD:
                 if (need.second.IsZero()){
                     // ded
-                    SetState(WorkerStates::DEAD);
+                    Die();
                 }
         }
     }
@@ -1018,10 +1053,13 @@ void Worker::AI(double dt){
     // clear actions
     switch (worker_state_){
         case WorkerStates::DEAD:
-            // do nothing, it's dead
+            // do nothing, it's dead. Shouldn't ever get here though.
             break;
         case WorkerStates::IDLE:
             // do nothing
+            break;
+        case WorkerStates::EXECUTINGTASK:
+            active_script_fcn_(dt);
             break;
         case WorkerStates::MOVING:
             // move towards goal
@@ -1072,8 +1110,57 @@ Rect<double> Worker::GetNearbySurroundingsRect(){
     local_rect.y_ += footprint_.y_;
     return local_rect;
 }
+void Worker::SetState(WorkerStates worker_state) 
+{
+    // this is hacky, but only perform leaving state checks if not switching to EXECUTINGTASK
+    // this won't work when the user right-clicks and then user presses e....., although maybe that's ok
+    if (worker_state != WorkerStates::EXECUTINGTASK){
+        // Check if leaving moving
+        if (worker_state_ == WorkerStates::MOVING){
+            // clear actions
+            ResetDynamicObjectActions();
+        }
+    }
+
+    // update state
+    worker_state_ = worker_state;
+}
+
+/////////////////////////////////////// Worker Action Primitives ///////////////////////////////////////
+void Worker::SelectBuilding(std::shared_ptr<Building> building_ptr){
+    // select a building
+    // auto success
+    SetState(WorkerStates::IDLE);
+    selected_building_ptr_ = building_ptr;
+}
+void Worker::SelectClosestBuilding(){
+    // iterate over buildings in nearby surroundings
+    double min_dist = 999.0;
+    bool found = false;
+    for (auto& building : nearby_surroundings_.buildings_){
+        auto dist = eucl_dist<double>(GetCenter(), building.second->center_);
+        if (dist < min_dist){
+            min_dist = dist;
+            found = true;
+            SelectBuilding(building.second);
+        }
+    }
+    if (found){
+        SetState(WorkerStates::IDLE);
+    }
+}
+void Worker::SetGoalToSelectedBuilding(){
+    // set the goal to the selected building
+    if (selected_building_ptr_ == nullptr){
+        return;
+    }
+    // auto success
+    SetState(WorkerStates::IDLE);
+    goal_.x_ = selected_building_ptr_->center_.x_;
+    goal_.y_ = selected_building_ptr_->center_.y_;
+}
+
 void Worker::MoveTowardsGoal(){
-    dynamic_object_actions_.ClearFlag();
     // TODO: base off center of footprint
     bool done_x = false;
     bool done_y = false;
@@ -1100,7 +1187,7 @@ void Worker::MoveTowardsGoal(){
     }
 
     if (done_x && done_y){
-        worker_state_ = WorkerStates::IDLE;
+        SetState(WorkerStates::IDLE);
     }
 }
 void Worker::Gather(double dt){
@@ -1235,6 +1322,7 @@ void Worker::TransferItem(ItemTypes item_type, double amount_request, std::share
 void Worker::TransferInventory(){
     // Smart transfer inventory to building based on context
     // check if building is nullptr
+
     if (selected_building_ptr_ == nullptr){
         return;
     }
@@ -1253,6 +1341,8 @@ void Worker::TransferInventory(){
             TransferItem(item.first, item.second->GetAmount(), selected_building_ptr_);
         }
     }
+
+    SetState(WorkerStates::IDLE);
 }
 void Worker::Eat(){
     // iterate over inventory, find first item with item_category_ == ItemCategories::FOOD, then remove it from inventory and increase need value
@@ -1267,6 +1357,43 @@ void Worker::Eat(){
             return;
         }
     }
+}
+void Worker::TransferInventoryToClosestBuilding(double dt){
+    // This is the very first "script" function.
+    // It is supposed to be called from the UPDATE function, so at FRAMERATE times per second.
+    // Therefore, any function which has a success criteria (e.g. MoveTowardsGoal) cannot be blocking.
+    // Must maintain a semi-permanent meta-structure which tracks the steps in the task,
+    // sets the worker state, increments through the task steps, and finally restarts
+
+    // EXECUTINGTASK should be a separate worker state, then, which will be called by the UPDATE function
+    // and ultimately enters here. The task manager should then take ownership, set the appropriate worker state
+    // so that actions can proceed as normal, and before the function returns revert the state back to EXECUTINGTASK
+    // to set up for the next loop.
+
+    // User will have to press a dedicated 'execute script' button and can break out of it at anytime by providing a different command
+    // ex: right clicking to move
+
+    std::function<void()> fcn;
+    // reset low-level actions
+    ResetDynamicObjectActions();
+
+    int i = task_current_step_;
+
+    auto step = task_steps_[i];
+    auto start_state = task_start_states[i];
+
+    SetState(start_state);
+    fcn = action_primitive_map_[step];
+    fcn();
+
+    // check if success
+    if (CheckState(WorkerStates::IDLE)){
+        // increment task_current_step_
+        task_current_step_ = (task_current_step_ + 1) % task_steps_.size();
+    }
+
+    // Revert to executing task. Bit of a hack.
+    SetState(WorkerStates::EXECUTINGTASK);
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////
 

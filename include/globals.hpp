@@ -12,6 +12,10 @@ struct XY
 {
     T x_{0}, y_{0};
 };
+template <typename T>
+double eucl_dist(XY<T> xy1, XY<T> xy2){
+    return std::abs(xy1.x_ - xy2.x_) + std::abs(xy1.y_ - xy2.y_);
+}
 
 // globals
 extern int FRAMERATE;

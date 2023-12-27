@@ -20,6 +20,8 @@ enum class BuildingStatus {
 
 class Building {
     public:
+        Rect<double> footprint_{0, 0, 1, 1};
+        XY<double> center_{0, 0};
         BuildingTypes building_type_;
         BuildingStatus building_status_;
         std::map<RecipeTypes, Recipe> recipes_; // allowable recipes in this building

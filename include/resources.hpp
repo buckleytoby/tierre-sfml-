@@ -2,6 +2,8 @@
 #ifndef RESOURCES_HPP
 #define RESOURCES_HPP
 
+#include <algorithm>
+
 enum class ResourceTypes {
     NONE,
     LUMBER = 128,
@@ -52,7 +54,7 @@ class Stone : public Resource
 class CornResource : public Resource
 {
     public:
-        CornResource(double total){resource_type_ = ResourceTypes::CORN; time_to_gather_ = 5.0; yield_per_gather_ = 1.0; total_ = total;}
+        CornResource(double total){resource_type_ = ResourceTypes::CORN; time_to_gather_ = 1.0; yield_per_gather_ = 1.0; total_ = total;}
 };
 
 
