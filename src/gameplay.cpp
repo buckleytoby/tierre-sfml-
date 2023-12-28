@@ -571,15 +571,7 @@ BitFlag GamePlay::handleInput(sf::Event& event){
             }
             if (event.mouseButton.button == sf::Mouse::Right){
                 std::cout << "Right mouse button released" << std::endl;
-                // move the selected dynamic object
-                for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                    if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                        // set worker state to moving
-                        auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                        worker->SetState(WorkerStates::MOVING);
-                        worker->SetGoal(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
-                    }
-                }
+                map_.SetAttentionAndMove(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
             } 
             break;
         ///////////////// Default /////////////////
@@ -947,6 +939,50 @@ void Map::MakeWorker(double x, double y){
     worker->needs_map_[NeedsTypes::FOOD].val_ = 100.0;
     dynamic_object_ptrs_.push_back(worker);
 }
+void Map::SetAttention(DynamicObjectPtr ptr, double x, double y){
+    // get tile int x, y
+    int tile_x = floor(x);
+    int tile_y = floor(y);
+    auto tile = GetTile(tile_x, tile_y);
+    BuildingPtr building_ptr{nullptr};
+    if (tile->HasBuildingPtr()){
+        building_ptr = tile->building_ptr_;
+    }
+    if (ptr->IsType(DynamicObjectTypes::WORKER)){
+        auto worker = std::static_pointer_cast<Worker>(ptr);
+        worker->SetAttention(building_ptr);
+    }
+}
+void Map::SetAttention(double x, double y){
+    // Implication: for all dynamic objects
+    for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_)
+    {
+        SetAttention(dynamic_object_ptr, x, y);
+    }
+}
+void Map::SetGoal(DynamicObjectPtr ptr, double x, double y){
+    if (ptr->IsType(DynamicObjectTypes::WORKER)){
+        std::static_pointer_cast<Worker>(ptr)->SetGoal(x, y);
+    }
+}
+void Map::MoveTowardsGoal(DynamicObjectPtr ptr){
+    if (ptr->IsType(DynamicObjectTypes::WORKER)){
+        std::static_pointer_cast<Worker>(ptr)->MoveTowardsGoal();
+    }
+}
+void Map::SetAttentionAndMove(DynamicObjectPtr ptr, double x, double y){
+    // set attention and move
+    SetAttention(ptr, x, y);
+    SetGoal(ptr, x, y);
+    MoveTowardsGoal(ptr);
+}
+void Map::SetAttentionAndMove(double x, double y){
+    // Implication: for all dynamic objects
+    for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_)
+    {
+        SetAttentionAndMove(dynamic_object_ptr, x, y);
+    }
+}
 /////////////////////////////////////// End Map ///////////////////////////////////////
 
 /////////////////////////////////////// DynamicObject ///////////////////////////////////////
@@ -1072,7 +1108,8 @@ void Worker::AI(double dt){
             // do nothing, it's dead. Shouldn't ever get here though.
             break;
         case WorkerStates::IDLE:
-            // do nothing
+            // Attempt to infer an action based on the attention
+            InferAction(dt);
             break;
         case WorkerStates::EXECUTINGTASK:
             active_script_fcn_(dt);
@@ -1177,6 +1214,7 @@ void Worker::SetGoalToSelectedBuilding(){
 }
 
 void Worker::MoveTowardsGoal(){
+    SetState(WorkerStates::MOVING);
     // TODO: base off center of footprint
     bool done_x = false;
     bool done_y = false;
@@ -1273,12 +1311,14 @@ void Worker::Construct(double dt){
             return;
         }
     }
-
+    EngageWithBuilding(selected_building_ptr_);
+}
+void Worker::EngageWithBuilding(BuildingPtr building_ptr){
     // switch case on building status
-    switch (selected_building_ptr_->building_status_){
+    switch (building_ptr->building_status_){
         case BuildingStatus::PRECONSTRUCTION:
             // transfer required items from inventory to building
-            for (auto& item : selected_building_ptr_->item_reqs_map_){
+            for (auto& item : building_ptr->item_reqs_map_){
                 // check if item in inventory
                 if (inventory_.find(item.first)){
                     // amount to transfer
@@ -1293,7 +1333,7 @@ void Worker::Construct(double dt){
             break;
         case BuildingStatus::CONSTRUCTION:
             // update construction effort
-            selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CONSTRUCTION].CalcEffortUnits();
+            building_ptr->effort_val_ += skill_map_[SkillTypes::CONSTRUCTION].CalcEffortUnits();
             break;
         case BuildingStatus::OPERATING:
             // add to effort val
@@ -1410,6 +1450,13 @@ void Worker::TransferInventoryToClosestBuilding(double dt){
 
     // Revert to executing task. Bit of a hack.
     SetState(WorkerStates::EXECUTINGTASK);
+}
+void Worker::InferAction(double dt){
+    // Infer an action based on the attention (selected_building_ptr_)
+    if (HasAttention()){
+        SetState(WorkerStates::CONSTRUCTING);
+        EngageWithBuilding(selected_building_ptr_);
+    }
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////
 

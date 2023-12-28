@@ -28,6 +28,14 @@ class Map {
         void SelectDynamicObject(double x, double y);
         void MakeBuilding(BuildingTypes building_type, double x, double y);
         void MakeWorker(double x, double y);
+
+        // Passthroughs
+        void SetAttention(DynamicObjectPtr ptr, double x, double y);
+        void SetAttention(double x, double y);
+        void SetGoal(DynamicObjectPtr ptr, double x, double y);
+        void MoveTowardsGoal(DynamicObjectPtr ptr);
+        void SetAttentionAndMove(DynamicObjectPtr ptr, double x, double y);
+        void SetAttentionAndMove(double x, double y);
 };
 
 #endif // MAP_HPP

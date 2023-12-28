@@ -58,7 +58,9 @@ class DynamicObject
         void SetDynamicObjectType(DynamicObjectTypes dynamic_object_type){dynamic_object_type_ = dynamic_object_type;}
         bool PointInFootprint(double x, double y);
         void ResetDynamicObjectActions(){dynamic_object_actions_.ClearFlag();}
+        bool IsType(DynamicObjectTypes dynamic_object_type){return dynamic_object_type_ == dynamic_object_type;}
 };
+typedef std::shared_ptr<DynamicObject> DynamicObjectPtr;
 
 enum class WorkerStates{
     DEAD,
@@ -133,24 +135,31 @@ class Worker : public DynamicObject
         Rect<double> GetNearbySurroundingsRect();
         void Die();
         bool CheckState(WorkerStates worker_state){return worker_state_ == worker_state;}
+        void SetAttention(BuildingPtr building_ptr){selected_building_ptr_ = building_ptr;}
+        bool HasAttention(){return selected_building_ptr_ != nullptr;}
 
         // Passthroughs
         void AddToInventory(ItemTypes type, double amount){inventory_.AddToInventory(type, amount);}
         ItemMap GetInventoryMap(){return inventory_.GetItemMap();}
 
         // Action Primitives
-        void SelectBuilding(std::shared_ptr<Building> building_ptr);
+        void SelectBuilding(BuildingPtr building_ptr);
         void SelectClosestBuilding();
         void SetGoalToSelectedBuilding();
         void MoveTowardsGoal();
         void Gather(double dt);
         void Construct(double dt);
         void Craft(double dt);
-        void TransferItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr);
+        void TransferItem(ItemTypes item_type, double amount_request, BuildingPtr building_ptr);
         void TransferInventory();
-        void TakeItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr);
+        void TakeItem(ItemTypes item_type, double amount_request, BuildingPtr building_ptr);
         void TakeInventory();
         void Eat();
+        void InferAction(double dt);
+        void EngageWithBuilding(BuildingPtr building_ptr);
+        // End Action Primitives
+
+
         // Action primitive map
         std::map<std::string, std::function<void()>> action_primitive_map_{
             {"SelectClosestBuilding", std::bind(&Worker::SelectClosestBuilding, this)},

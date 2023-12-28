@@ -38,6 +38,7 @@ class Building {
         void AddToInventory(ItemTypes itemType, double amount);
         BuildingStatus GetStatus(){return building_status_;}
 };
+typedef std::shared_ptr<Building> BuildingPtr;
 
 class Workspace : public Building
 {
@@ -84,16 +85,16 @@ class BuildingFactory
             switch (building_type)
             {
                 case BuildingTypes::WORKSPACE:
-                    return std::shared_ptr<Workspace>();
+                    return std::make_shared<Workspace>();
                     break;
                 case BuildingTypes::STORAGESPACE:
-                    return std::shared_ptr<Storagespace>();
+                    return std::make_shared<Storagespace>();
                     break;
                 case BuildingTypes::FARM:
-                    return std::shared_ptr<Farm>();
+                    return std::make_shared<Farm>();
                     break;
                 default:
-                    return std::shared_ptr<Building>();
+                    return std::make_shared<Building>();
                     break;
             }
         }
