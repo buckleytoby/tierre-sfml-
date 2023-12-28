@@ -18,6 +18,7 @@ add_executable(CMakeSFMLProject
     src/main.cpp
     src/senses.cpp
     src/skills.cpp
+    src/taskmanager.cpp
     src/title_screen.cpp
     )
 target_link_libraries(CMakeSFMLProject PRIVATE sfml-graphics)

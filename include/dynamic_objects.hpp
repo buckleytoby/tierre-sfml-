@@ -12,6 +12,7 @@
 #include "skills.hpp"
 #include "senses.hpp"
 #include "map.hpp"
+#include "taskmanager.hpp"
 
 // following this post: https://stackoverflow.com/a/6515232
 
@@ -144,39 +145,37 @@ class Worker : public DynamicObject
 
         // Action Primitives
         void SelectBuilding(BuildingPtr building_ptr);
-        void SelectClosestBuilding();
-        void SetGoalToSelectedBuilding();
-        void MoveTowardsGoal();
+        DefaultActionFcn SelectClosestBuilding();
+        DefaultActionFcn SetGoalToSelectedBuilding();
+        DefaultActionFcn MoveTowardsGoal();
         void Gather(double dt);
         void Construct(double dt);
         void Craft(double dt);
         void TransferItem(ItemTypes item_type, double amount_request, BuildingPtr building_ptr);
         void TransferInventory();
         void TakeItem(ItemTypes item_type, double amount_request, BuildingPtr building_ptr);
-        void TakeInventory();
-        void Eat();
+        DefaultActionFcn TakeInventory();
+        DefaultActionFcn Eat();
         void InferAction(double dt);
         void EngageWithBuilding(BuildingPtr building_ptr);
         // End Action Primitives
 
 
         // Action primitive map
+        // reference: https://stackoverflow.com/questions/3113139/how-to-create-mapstring-classmethod-in-c-and-be-able-to-search-for-functi
         std::map<std::string, std::function<void()>> action_primitive_map_{
             {"SelectClosestBuilding", std::bind(&Worker::SelectClosestBuilding, this)},
             {"SetGoalToSelectedBuilding", std::bind(&Worker::SetGoalToSelectedBuilding, this)},
             {"MoveTowardsGoal", std::bind(&Worker::MoveTowardsGoal, this)},
             {"TransferInventory", std::bind(&Worker::TransferInventory, this)},
         };
+        TaskManager task_manager_;
+        void ExecuteTask(double dt);
 
-        // Pre-built test scripts
-        void TransferInventoryToClosestBuilding(double dt);
+        // Pre-built test tasks
+        void MakeTask1();
+
         void GatherAndStoreLumber(double dt);
-
-        // Task Manager bookkeeping variables
-        std::function<void(double)> active_script_fcn_ = std::bind(&Worker::TransferInventoryToClosestBuilding, this, std::placeholders::_1);
-        int task_current_step_{0};
-        std::vector<std::string> task_steps_ = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
-        std::vector<WorkerStates> task_start_states = {WorkerStates::ACTIVE, WorkerStates::ACTIVE, WorkerStates::MOVING, WorkerStates::ACTIVE};
 };
 
 #endif // DYNAMIC_OBJECTS_HPP

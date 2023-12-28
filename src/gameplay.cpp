@@ -312,11 +312,11 @@ void GamePlay::draw(sf::RenderWindow& window){
             // if executing task, add task progress
             else if (worker->worker_state_ == WorkerStates::EXECUTINGTASK){
                 str += "\nExecuting Task Progress: \n";
-                for (int i=0; i<worker->task_steps_.size(); i++){
-                    if (i == worker->task_current_step_){
+                for (int i=0; i<worker->task_manager_.active_task_->actions_.size(); i++){
+                    if (i == worker->task_manager_.active_task_->active_action_){
                         str += ">> ";
                     }
-                    str += worker->task_steps_[i] + "\n";
+                    str += worker->task_manager_.active_task_->actions_[i]->to_string() + "\n";
                 }
             }
             // add needs
@@ -1112,7 +1112,7 @@ void Worker::AI(double dt){
             InferAction(dt);
             break;
         case WorkerStates::EXECUTINGTASK:
-            active_script_fcn_(dt);
+            ExecuteTask(dt);
             break;
         case WorkerStates::MOVING:
             // move towards goal
@@ -1186,7 +1186,7 @@ void Worker::SelectBuilding(std::shared_ptr<Building> building_ptr){
     SetState(WorkerStates::IDLE);
     selected_building_ptr_ = building_ptr;
 }
-void Worker::SelectClosestBuilding(){
+DefaultActionFcn Worker::SelectClosestBuilding(){
     // iterate over buildings in nearby surroundings
     double min_dist = 999.0;
     bool found = false;
@@ -1201,19 +1201,21 @@ void Worker::SelectClosestBuilding(){
     if (found){
         SetState(WorkerStates::IDLE);
     }
+    return 0;
 }
-void Worker::SetGoalToSelectedBuilding(){
+DefaultActionFcn Worker::SetGoalToSelectedBuilding(){
     // set the goal to the selected building
     if (selected_building_ptr_ == nullptr){
-        return;
+        return 0;
     }
     // auto success
     SetState(WorkerStates::IDLE);
     goal_.x_ = selected_building_ptr_->center_.x_;
     goal_.y_ = selected_building_ptr_->center_.y_;
+    return 0;
 }
 
-void Worker::MoveTowardsGoal(){
+DefaultActionFcn Worker::MoveTowardsGoal(){
     SetState(WorkerStates::MOVING);
     // TODO: base off center of footprint
     bool done_x = false;
@@ -1243,6 +1245,7 @@ void Worker::MoveTowardsGoal(){
     if (done_x && done_y){
         SetState(WorkerStates::IDLE);
     }
+    return 0;
 }
 void Worker::Gather(double dt){
     // gather resources
@@ -1400,7 +1403,7 @@ void Worker::TransferInventory(){
 
     SetState(WorkerStates::IDLE);
 }
-void Worker::Eat(){
+DefaultActionFcn Worker::Eat(){
     // iterate over inventory, find first item with item_category_ == ItemCategories::FOOD, then remove it from inventory and increase need value
     for (auto& item : inventory_.GetItemMap()){
         if (item.second->IsItemCategory(ItemCategories::FOOD)){
@@ -1410,46 +1413,10 @@ void Worker::Eat(){
             needs_map_[NeedsTypes::FOOD].val_ += amount_to_eat * food->nutrient_amount_;
             // subtract from inventory
             item.second->RemoveAmount(amount_to_eat);
-            return;
+            return 0;
         }
     }
-}
-void Worker::TransferInventoryToClosestBuilding(double dt){
-    // This is the very first "script" function.
-    // It is supposed to be called from the UPDATE function, so at FRAMERATE times per second.
-    // Therefore, any function which has a success criteria (e.g. MoveTowardsGoal) cannot be blocking.
-    // Must maintain a semi-permanent meta-structure which tracks the steps in the task,
-    // sets the worker state, increments through the task steps, and finally restarts
-
-    // EXECUTINGTASK should be a separate worker state, then, which will be called by the UPDATE function
-    // and ultimately enters here. The task manager should then take ownership, set the appropriate worker state
-    // so that actions can proceed as normal, and before the function returns revert the state back to EXECUTINGTASK
-    // to set up for the next loop.
-
-    // User will have to press a dedicated 'execute script' button and can break out of it at anytime by providing a different command
-    // ex: right clicking to move
-
-    std::function<void()> fcn;
-    // reset low-level actions
-    ResetDynamicObjectActions();
-
-    int i = task_current_step_;
-
-    auto step = task_steps_[i];
-    auto start_state = task_start_states[i];
-
-    SetState(start_state);
-    fcn = action_primitive_map_[step];
-    fcn();
-
-    // check if success
-    if (CheckState(WorkerStates::IDLE)){
-        // increment task_current_step_
-        task_current_step_ = (task_current_step_ + 1) % task_steps_.size();
-    }
-
-    // Revert to executing task. Bit of a hack.
-    SetState(WorkerStates::EXECUTINGTASK);
+    return 0;
 }
 void Worker::InferAction(double dt){
     // Infer an action based on the attention (selected_building_ptr_)
@@ -1457,6 +1424,59 @@ void Worker::InferAction(double dt){
         SetState(WorkerStates::CONSTRUCTING);
         EngageWithBuilding(selected_building_ptr_);
     }
+}
+void Worker::ExecuteTask(double dt){
+    // Execute a task
+    task_manager_.Execute(dt);
+
+    // Revert to executing task. Bit of a hack.
+    SetState(WorkerStates::EXECUTINGTASK);
+}
+void Worker::MakeTask1(){
+    // This is the very first "task" function.
+    // It is supposed to be called from the UPDATE function, so at FRAMERATE times per second.
+    // Therefore, any function which has a success criteria (e.g. MoveTowardsGoal) cannot be blocking.
+    // Must maintain a semi-permanent meta-structure which tracks the actions in the task,
+    // sets the worker state, increments through the task actions, and finally restarts
+
+    // EXECUTINGTASK should be a separate worker state, then, which will be called by the UPDATE function
+    // and ultimately enters here. The task manager should then take ownership, set the appropriate worker state
+    // so that actions can proceed as normal, and before the function returns revert the state back to EXECUTINGTASK
+    // to set up for the next loop.
+
+    // User will have to press a dedicated 'execute task' button and can break out of it at anytime by providing a different command
+    // ex: right clicking to move
+
+    std::vector<std::string> task_actions_ = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
+    std::vector<WorkerStates> task_start_states = {WorkerStates::ACTIVE, WorkerStates::ACTIVE, WorkerStates::MOVING, WorkerStates::ACTIVE};
+    
+    TaskPtr task = std::make_shared<Task>();
+    for (int i=0; i<task_actions_.size(); i++){
+            
+        auto update_fcn = [this, task_actions_, task_start_states, i](){
+            // reset low-level actions
+            ResetDynamicObjectActions();
+            auto start_state = task_start_states[i];
+            SetState(start_state);
+            action_primitive_map_[task_actions_[i]]();
+        };
+
+        // define success callback
+        SuccessFcn success_fcn = [this](){
+            if (CheckState(WorkerStates::IDLE)){
+                return true;
+            } else {
+                return false;
+            }
+        };
+
+        ActionPtr action1 = std::make_shared<Action>();
+        action1->SetUpdateCallback(update_fcn);
+        action1->SetSuccessCallback(success_fcn);
+        task->AddAction(action1);
+    }
+    // add to task manager
+    task_manager_.AddTask(task);
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////
 
