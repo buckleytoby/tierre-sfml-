@@ -10,7 +10,7 @@ class TitleScreen : GameScreen
         ~TitleScreen();
         void draw(sf::RenderWindow &window);
         void update(double dt);
-        BitFlag handleInput(sf::Event& event);
+        GameScreenInputs HandleInput(sf::Event& event);
         void load(sf::RenderWindow& window);
         void unload();
 };

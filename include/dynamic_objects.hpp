@@ -15,6 +15,11 @@
 #include "taskmanager.hpp"
 
 // following this post: https://stackoverflow.com/a/6515232
+enum class DynamicObjectInputs
+{
+    NONE,
+    HANDLED,
+};
 
 // Dynamic Object Superclass
 enum class DynamicObjectActions
@@ -63,6 +68,11 @@ class DynamicObject
 };
 typedef std::shared_ptr<DynamicObject> DynamicObjectPtr;
 
+enum class WorkerInputs
+{
+    NONE,
+    HANDLED,
+};
 enum class WorkerStates{
     DEAD,
     IDLE,
@@ -104,6 +114,17 @@ class FoodNeed : public Need
     public:
         FoodNeed(){need_type_ = NeedsTypes::FOOD; val_ = 100.0; deterioration_rate_ = 0.5; auto_fulfill_level_ = 50.0;}
 };
+class WaterNeed : public Need
+{
+    public:
+        WaterNeed(){need_type_ = NeedsTypes::WATER; val_ = 100.0; deterioration_rate_ = 0.5; auto_fulfill_level_ = 50.0;}
+};
+class SleepNeed : public Need
+{
+    public:
+        SleepNeed(){need_type_ = NeedsTypes::SLEEP; val_ = 100.0; deterioration_rate_ = 0.5; auto_fulfill_level_ = 50.0;}
+};
+
 
 class Worker : public DynamicObject
 {
@@ -128,6 +149,7 @@ class Worker : public DynamicObject
 
         Worker();
         void update(double dt);
+        WorkerInputs HandleInput(sf::Event& event);
         void AI(double dt);
         void SetGoal(double x, double y);
         void SetState(WorkerStates worker_state);

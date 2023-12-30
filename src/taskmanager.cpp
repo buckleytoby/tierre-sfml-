@@ -39,6 +39,8 @@ void TaskManager::Execute(double dt){
     // execute the active task
     if (active_task_ != nullptr){
         active_task_->update(dt);
+    } else {
+        std::cout << "No active task" << std::endl;
     }
 }
 ////////////////////////////// End TaskManager //////////////////////////////

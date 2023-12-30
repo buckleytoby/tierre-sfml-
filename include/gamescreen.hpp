@@ -6,12 +6,20 @@
 #include "globals.hpp"
 #include "BitWise.hpp"
 
+
+enum class GameScreenInputs {
+    NONE,
+    QUIT,
+    CHANGEACTIVEGAMESCREENTITLESCREEN,
+    CHANGEACTIVEGAMESCREENGAMEPLAY,
+};
+
 class GameScreen
 {
     public:
         virtual void draw(sf::RenderWindow& window){};
         virtual void update(double dt){};
-        virtual BitFlag handleInput(sf::Event& event){return BitFlag();};
+        virtual GameScreenInputs HandleInput(sf::Event& event){return GameScreenInputs::NONE;};
         virtual void load(sf::RenderWindow& window){};
         virtual void unload(){};
 };

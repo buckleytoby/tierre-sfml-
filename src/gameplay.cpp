@@ -3,130 +3,13 @@
 
 
 
-// Hard Coded Enum Names
-const std::string to_full_name(ResourceTypes p){
-    switch(p)
-    {
-        case ResourceTypes::LUMBER: return "Lumber";
-        case ResourceTypes::STONE: return "Stone";
-        case ResourceTypes::WATER: return "Water";
-        case ResourceTypes::GRASS: return "Grass";
-        case ResourceTypes::CORN: return "Corn";
-    
-    }
-    return ""; // or an empty string
-    
-}
-const std::string to_string(ResourceTypes p){
-  switch(p)
-  {
-    case ResourceTypes::LUMBER: return "L";
-    case ResourceTypes::STONE: return "S";
-    case ResourceTypes::WATER: return "W";
-    case ResourceTypes::GRASS: return "G";
-    case ResourceTypes::CORN: return "C";
-
-  }
-  return ""; // or an empty string
-}
-const sf::Color to_color(ResourceTypes p){
-  switch(p)
-  {
-    case ResourceTypes::LUMBER: return sf::Color::Red;
-    case ResourceTypes::STONE: return sf::Color::Yellow;
-    case ResourceTypes::WATER: return sf::Color::Blue;
-    case ResourceTypes::GRASS: return sf::Color::Green;
-
-  }
-  return sf::Color::White;
-}
-const std::string to_string(ItemTypes p){
-    switch(p)
-    {
-        case ItemTypes::NONE: return "";
-    }
-    return ""; // or an empty string
-}
-const std::string to_string(WorkerStates p){
-  switch(p)
-  {
-    case WorkerStates::DEAD: return "dead";
-    case WorkerStates::IDLE: return "idle";
-    case WorkerStates::EXECUTINGTASK: return "executing task";
-    case WorkerStates::MOVING: return "moving";
-    case WorkerStates::GATHERIDLE: return "gatheridle";
-    case WorkerStates::GATHERING: return "gathering";
-    case WorkerStates::CONSTRUCTING: return "constructing";
-
-  }
-  return ""; // or an empty string
-}
-const std::string to_full_string(WorkerStates p){return to_string(p);}
-const std::string to_string(NeedsTypes p){
-  switch(p)
-  {
-    case NeedsTypes::FOOD: return "food";
-    case NeedsTypes::SLEEP: return "sleep";
-    case NeedsTypes::WATER: return "water";
-
-  }
-  return ""; // or an empty string
-}
-const std::string to_string(BuildingTypes p){
-  switch(p)
-  {
-    case BuildingTypes::NONE: return "";
-    case BuildingTypes::WORKSPACE: return "Ws";
-    case BuildingTypes::FARM: return "Fa";
-  }
-  return ""; // or an empty string
-}
-const std::string to_full_string(BuildingTypes p){
-  switch(p)
-  {
-    case BuildingTypes::NONE: return "";
-    case BuildingTypes::WORKSPACE: return "Workspace";
-    case BuildingTypes::FARM: return "Farm";
-  }
-  return ""; // or an empty string
-}
-const std::string to_full_string(BuildingStatus p){
-    switch(p)
-    {
-        case BuildingStatus::PRECONSTRUCTION: return "Preconstruction";
-        case BuildingStatus::CONSTRUCTION: return "Construction";
-        case BuildingStatus::READY: return "Ready";
-        case BuildingStatus::OPERATING: return "Operating";
-    }
-    return ""; // or an empty string
-}
-const std::string to_full_string(ItemTypes p){
-    switch(p)
-    {
-        case ItemTypes::NONE: return "";
-        case ItemTypes::CORNSEED: return "Corn Seed";
-        case ItemTypes::LUMBER: return "Lumber";
-        case ItemTypes::STONE: return "Stone";
-        case ItemTypes::WATER: return "Water";
-        case ItemTypes::GRASS: return "Grass";
-        case ItemTypes::CORN: return "Corn";
-    }
-    return ""; // or an empty string
-}
-const std::string to_full_string(RecipeTypes p){
-    switch(p)
-    {
-        case RecipeTypes::NONE: return "";
-        case RecipeTypes::PROCESSCORNSTALK: return "Process Cornstalk";
-        case RecipeTypes::FARMCORN: return "Farm Corn";
-    }
-    return ""; // or an empty string
-}
 
 /////////////////////////////////////// GamePlay ///////////////////////////////////////
 // write class methods
 GamePlay::GamePlay(){
     // constructor
+    hud_.map_ref_ = MapPtr(&map_);
+    hud_.viewport_ref_ = ViewportPtr(&viewport_);
 
     // Make the map
     map_.SetWidth(100);
@@ -188,398 +71,64 @@ GamePlay::~GamePlay(){
     // destructor
 }
 void GamePlay::draw(sf::RenderWindow& window){
-    // draw the gameplay
-    sf::Font font;
-    if (!font.loadFromFile("c:\\Windows\\Fonts\\arial.ttf"))
-    {
-        return;
-    }
-
-    // update the title screen
-    sf::Text text;
-    text.setFont(font); // font is a sf::Font
-    text.setString("Press ESC to go back to Title Screen");
-    text.setCharacterSize(24); // in pixels, not points!
-    // text.setOrigin(0, -5); // moves the text down 5 pixels
-    text.setPosition(10, 10);
-    text.setFillColor(sf::Color::Red);
-    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
-    window.draw(text);
-
-    // iterate through the viewport, size + 1 to draw the tiles on the edge
-    for (int i=viewport_.GetIntX(); i<viewport_.GetIntWidth()+1; i++){
-        for (int j=viewport_.GetIntY(); j<viewport_.GetIntHeight()+1; j++){
-            // get the tile from map_
-            auto tile = map_.GetTile(i, j);
-            // skip if no tile (including OOB)
-            if (tile == nullptr){
-                continue;
-            }       
-
-            // get the string
-            std::string str = "";
-            sf::Color color(0, 0, 0);
-
-            // check for building
-            if (tile->building_type_ != BuildingTypes::NONE){
-                str += to_string(tile->building_type_);
-                color = sf::Color::White;
-            } else {
-                // iterate through resources
-                for (auto& resource : map_.GetTile(i, j)->resource_map_){
-                    str += to_string(resource.second->resource_type_);
-                    color = to_color(resource.second->resource_type_);
-                }
-            }
-            if (str == ""){
-                continue;
-            }
-
-            // calculate pixel position for i, j
-            double pixelX = viewport_.ConvertMeterToPixelX(window, i);
-            double pixelY = viewport_.ConvertMeterToPixelY(window, j);
-            double pixelsPerMeterW = viewport_.GetPixelsPerMeterX(window);
-            double pixelsPerMeterH = viewport_.GetPixelsPerMeterY(window);  
-
-            // draw the tile
-            sf::Text text;
-            text.setFont(font);
-            text.setString(str);
-            text.setPosition(pixelX, pixelY);
-            text.setOrigin(0, pixelsPerMeterH); // set origin to bottom left
-            text.setCharacterSize(pixelsPerMeterH); // pixels
-            // text.setScale(pixelsPerMeterW, pixelsPerMeterH); // isn't working well
-            text.setFillColor(color);
-            text.setStyle(sf::Text::Bold);
-            window.draw(text);
-        }
-    }
-
-    // iterate through dynamic game objects
-    for (auto& dynamic_object_ptr : map_.dynamic_object_ptrs_){
-        // calculate pixel position for i, j
-        double pixelX = viewport_.ConvertMeterToPixelX(window, dynamic_object_ptr->footprint_.x_);
-        double pixelY = viewport_.ConvertMeterToPixelY(window, dynamic_object_ptr->footprint_.y_);   
-        double pixelsPerMeterH = viewport_.GetPixelsPerMeterY(window);         
-
-        // draw the tile
-        sf::Text text;
-        text.setFont(font);
-        text.setString("W");
-        text.setPosition(pixelX, pixelY);
-        text.setCharacterSize(pixelsPerMeterH); // pixels
-        text.setOrigin(0, pixelsPerMeterH); // set origin to bottom left
-        // text.setScale(pixelsPerMeterW, pixelsPerMeterH); // isn't working well
-        text.setFillColor(sf::Color::White);
-        text.setStyle(sf::Text::Bold);
-        window.draw(text);
-    }
-
-    // HUD
-    // HUD outline
-    sf::RectangleShape shape(sf::Vector2f(300, window.getSize().y - 100));
-    shape.setPosition(15.0, 110);
-    shape.setFillColor(sf::Color::Black);
-    // set a 10-pixel wide orange outline
-    shape.setOutlineThickness(10.f);
-    shape.setOutlineColor(sf::Color::Cyan);
-    window.draw(shape);
-    // end HUD outline
-
-    // make string for selected unit
-    std::string str = "";
-    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-        str += "Selected Unit: ";
-        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-            str += "Worker";
-            // add inventory
-            str += "\nInventory: ";
-            for (auto& item : worker->GetInventoryMap()){
-                str += to_full_string(item.first);
-                str += ": ";
-                str += std::to_string(item.second->GetAmount());
-                str += ", ";
-            }
-            // add state
-            str += "\nState: ";
-            str += to_string(worker->worker_state_);
-            // if gathering, add gather progress
-            if (worker->worker_state_ == WorkerStates::GATHERING){
-                str += "\nGathering " + to_full_name(worker->selected_resource_ptr_->resource_type_) + " Progress: ";
-                str += std::to_string(worker->action_time_) + " / " + std::to_string(worker->selected_resource_ptr_->time_to_gather_);
-            }
-            // if executing task, add task progress
-            else if (worker->worker_state_ == WorkerStates::EXECUTINGTASK){
-                str += "\nExecuting Task Progress: \n";
-                for (int i=0; i<worker->task_manager_.active_task_->actions_.size(); i++){
-                    if (i == worker->task_manager_.active_task_->active_action_){
-                        str += ">> ";
-                    }
-                    str += worker->task_manager_.active_task_->actions_[i]->to_string() + "\n";
-                }
-            }
-            // add needs
-            str += "\nNeeds: ";
-            for (auto& need : worker->needs_map_){
-                str += to_string(need.first);
-                str += ": ";
-                str += std::to_string(need.second.val_);
-                str += ", ";
-            }
-
-
-        } else if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::GENERIC){
-            str += "Generic";
-            break;
-        }
-        // add position
-        str += "\nPos: " + std::to_string(dynamic_object_ptr->footprint_.x_);
-        str += ", ";
-        str += std::to_string(dynamic_object_ptr->footprint_.y_);
-    }
-    // end make string for selected unit
-
-    // make string for selected tile
-    if (map_.selected_tile_ptr_ != nullptr){
-        str += "Selected Tile: ";
-        // add position
-        str += "\nPos: " + std::to_string(map_.selected_tile_ptr_->x_);
-        str += ", ";
-        str += std::to_string(map_.selected_tile_ptr_->y_);
-        // add resources
-        str += "\nResources: ";
-        for (auto& resource : map_.selected_tile_ptr_->resource_map_){
-            str += to_full_name(resource.second->resource_type_);
-            str += ": ";
-            str += std::to_string(resource.second->GetTotal());
-            str += ", ";
-        }
-        // add building
-        if (map_.selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
-            str += "\nBuilding: ";
-            str += to_full_string(map_.selected_tile_ptr_->building_type_);
-            str += "\nBuilding Status: " + to_full_string(map_.selected_tile_ptr_->building_ptr_->GetStatus());
-            str += "\nInventory: ";
-            for (auto& item : map_.selected_tile_ptr_->building_ptr_->inventory_map_){
-                str += to_full_string(item.first);
-                str += ": ";
-                str += std::to_string(item.second);
-                str += ", ";
-            }
-            // switch over building status
-            switch (map_.selected_tile_ptr_->building_ptr_->GetStatus()){
-                case BuildingStatus::PRECONSTRUCTION:
-                    // iterate through item_reqs_map
-                    str += "\nItem Reqs: ";
-                    for (auto& item : map_.selected_tile_ptr_->building_ptr_->item_reqs_map_){
-                        str += to_full_string(item.first);
-                        str += ": ";
-                        str += std::to_string(item.second);
-                        str += ", ";
-                    }
-                    break;
-                case BuildingStatus::CONSTRUCTION:
-                    str += "\nConstruction Effort: " + std::to_string(map_.selected_tile_ptr_->building_ptr_->effort_val_);
-                    str += " / " + std::to_string(map_.selected_tile_ptr_->building_ptr_->construction_effort_req_);
-                    break;
-                case BuildingStatus::READY:
-                    str += "\n Recipe " + to_full_string(map_.selected_tile_ptr_->building_ptr_->active_recipe_) + " Reqs: ";
-                    for (auto& item : map_.selected_tile_ptr_->building_ptr_->recipes_[map_.selected_tile_ptr_->building_ptr_->active_recipe_].inputs_){
-                        str += to_full_string(item.first);
-                        str += ": ";
-                        str += std::to_string(item.second);
-                        str += ", ";
-                    }
-                    break;
-                case BuildingStatus::OPERATING:
-                    str += "\n Recipe Progress: " + std::to_string(map_.selected_tile_ptr_->building_ptr_->effort_val_);
-                    str += " / " + std::to_string(map_.selected_tile_ptr_->building_ptr_->recipes_[map_.selected_tile_ptr_->building_ptr_->active_recipe_].effort_req_);
-                    break;
-            }
-
-        }
-    }
-    
-    // draw the string
-    text.setFont(font);
-    text.setString(str);
-    text.setPosition(20, 130);
-    text.setCharacterSize(12); // pixels
-    text.setFillColor(sf::Color::White);
-    text.setStyle(sf::Text::Bold);
-    window.draw(text);
-
+    hud_.Draw(window);
 }
 void GamePlay::update(double dt){
-    // update the gameplay
+    //// meta updates
+    // update the GUI
+    hud_.Update(dt);
+
+    //// update the gameplay
     // update the map
     map_.update(dt);
 
     // update the viewport
     viewport_.update(dt);
 }
-BitFlag GamePlay::handleInput(sf::Event& event){
-    BitFlag handleInputFlags;
-    // handle input for the title screen
+GameScreenInputs GamePlay::HandleInput(sf::Event& event){
+    // the idea is to have the actions resultant from the sf::Event& event be context dependent, as in, depending on what the user has currently selected, and what keystrokes they make, the action that results is different.
+    // this allows each class member to implement its own HandleInput function which updates its own actions, and then in the update step, it'll actually execute those actions
+
+    // gameplay level actions, these are independent of what's going on in the game
+    GameScreenInputs output = GameScreenInputs::NONE;
+
     switch (event.type){
-        ///////////////// key pressed /////////////////
-        case sf::Event::KeyPressed:
+        case sf::Event::KeyReleased:
             switch (event.key.scancode){
                 case sf::Keyboard::Scan::Escape:
                     std::cout << "Change active gamescreen TitleScreen" << std::endl;
-                    handleInputFlags.SetFlag((EFlagValue)HandleInputActions::CHANGEACTIVEGAMESCREENTITLESCREEN);
-                    break;
-                case sf::Keyboard::Scan::A:
-                    std::cout << "Move viewport left" << std::endl;
-                    viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::SCROLL_LEFT);
-                    break;
-                case sf::Keyboard::Scan::D:
-                    std::cout << "Move viewport right" << std::endl;
-                    viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::SCROLL_RIGHT);
-                    break;
-                case sf::Keyboard::Scan::W:
-                    std::cout << "Move viewport up" << std::endl;
-                    viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::SCROLL_UP);
-                    break;
-                case sf::Keyboard::Scan::S:
-                    std::cout << "Move viewport down" << std::endl;
-                    viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::SCROLL_DOWN);
-                    break;
-                default:
-                    break;
+                    return GameScreenInputs::CHANGEACTIVEGAMESCREENTITLESCREEN;
             }
-            break;
-        ///////////////// key released /////////////////
-        case sf::Event::KeyReleased:
-            switch (event.key.scancode){
-                case sf::Keyboard::Scan::A:
-                    std::cout << "Stop moving viewport left" << std::endl;
-                    viewport_.viewport_actions_.UnsetFlag((EFlagValue)ViewportActions::SCROLL_LEFT);
-                    break;
-                case sf::Keyboard::Scan::D:
-                    std::cout << "Stop moving viewport right" << std::endl;
-                    viewport_.viewport_actions_.UnsetFlag((EFlagValue)ViewportActions::SCROLL_RIGHT);
-                    break;
-                case sf::Keyboard::Scan::W:
-                    std::cout << "Stop moving viewport up" << std::endl;
-                    viewport_.viewport_actions_.UnsetFlag((EFlagValue)ViewportActions::SCROLL_UP);
-                    break;
-                case sf::Keyboard::Scan::S:
-                    std::cout << "Stop moving viewport down" << std::endl;
-                    viewport_.viewport_actions_.UnsetFlag((EFlagValue)ViewportActions::SCROLL_DOWN);
-                    break;
-                case sf::Keyboard::Scan::G:
-                    std::cout << "Toggle gathering" << std::endl;
-                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                            // set worker state to gathering
-                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                            worker->SetState(WorkerStates::GATHERIDLE);
-                        }
-                    }
-                    break;
-                case sf::Keyboard::Scan::C:
-                    std::cout << "Toggle constructing" << std::endl;
-                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                            // set worker state to constructing
-                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                            worker->SetState(WorkerStates::CONSTRUCTINGIDLE);
-                        }
-                    }
-                    break;
-                case sf::Keyboard::Scan::R:
-                    std::cout << "Toggle crafting" << std::endl;
-                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                            // set worker state to crafting
-                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                            worker->SetState(WorkerStates::CRAFTINGIDLE);
-                        }
-                    }
-                    break;
-                case sf::Keyboard::Scan::T:
-                    std::cout << "Transfer Inventory" << std::endl;
-                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                            worker->TransferInventory();
-                        }
-                    }
-                    break;
-                case sf::Keyboard::Scan::E:
-                    std::cout <<"Execute Task" << std::endl;
-                    for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                        if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
-                            auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
-                            worker->SetState(WorkerStates::EXECUTINGTASK);
-                        }
-                    }
-                    break;
-                case sf::Keyboard::Scan::Num1:{
-                    std::cout << "Build workspace" << std::endl;
-                    // get mouse position
-                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
-                    // create a workspace
-                    map_.MakeBuilding(BuildingTypes::WORKSPACE, viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
-                    break;}
-                case sf::Keyboard::Scan::Num2:{
-                    std::cout << "Build farm" << std::endl;
-                    // get mouse position
-                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
-                    // create a farm
-                    map_.MakeBuilding(BuildingTypes::FARM, viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
-                    break;}
-                case sf::Keyboard::Scan::Num0:{
-                    std::cout << "Make worker" << std::endl;
-                    // get mouse position
-                    sf::Vector2i mousePosition = sf::Mouse::getPosition(*viewport_.window_ptr_);
-                    // create a worker
-                    map_.MakeWorker(viewport_.ConvertPixelToMeterX(mousePosition.x), viewport_.ConvertPixelToMeterY(mousePosition.y));
-                    break;}
-                default:
-                    break;
-            }
-            break;
-        ///////////////// MouseWheelScrolled /////////////////
-        case sf::Event::MouseWheelScrolled:
-            std::cout << "wheel movement: " << event.mouseWheelScroll.delta << std::endl;
-            std::cout << "mouse x: " << event.mouseWheelScroll.x << std::endl;
-            std::cout << "mouse y: " << event.mouseWheelScroll.y << std::endl;
-            if (event.mouseWheelScroll.delta > 0){
-                std::cout << "Zoom in" << std::endl;
-                viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::ZOOM_IN_ONCE);
-            } else {
-                std::cout << "Zoom out" << std::endl;
-                viewport_.viewport_actions_.SetFlag((EFlagValue)ViewportActions::ZOOM_OUT_ONCE);
-            }
-            break;
-        ///////////////// MouseClicked /////////////////
-        case sf::Event::MouseButtonReleased:
-            std::cout << "mouse button: " << event.mouseButton.button << std::endl;
-            std::cout << "mouse x: " << event.mouseButton.x << std::endl;
-            std::cout << "mouse y: " << event.mouseButton.y << std::endl;
-            if (event.mouseButton.button == sf::Mouse::Left){
-                std::cout << "Left mouse button released" << std::endl;
-                // select a dynamic object
-                map_.SelectObject(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
-                // print dynamic object details
-                for (auto& dynamic_object_ptr : map_.selected_dynamic_object_ptrs_){
-                    std::cout << "Selected dynamic object: " << dynamic_object_ptr->footprint_.x_ << ", " << dynamic_object_ptr->footprint_.y_ << std::endl;
-                }
-            }
-            if (event.mouseButton.button == sf::Mouse::Right){
-                std::cout << "Right mouse button released" << std::endl;
-                map_.SetAttentionAndMove(viewport_.ConvertPixelToMeterX(event.mouseButton.x), viewport_.ConvertPixelToMeterY(event.mouseButton.y));
-            } 
-            break;
-        ///////////////// Default /////////////////
-        default:
-            break;
-    } //////////////// END event.type switch /////////////////
+    }
 
-    return handleInputFlags;
+    // update mouse position
+    viewport_.UpdateMousePosition();
+    map_.SetMousePosition(viewport_.map_mouse_x_, viewport_.map_mouse_y_);
+
+    // viewport takes next precedence
+    auto viewportinputs = viewport_.HandleInput(event);
+    switch (viewportinputs){
+        case ViewportInputs::NONE:
+            break;
+        case ViewportInputs::HANDLED:
+            return GameScreenInputs::NONE;
+            break;
+    }
+    
+    // HUD takes next precedence
+    auto hudinputs = hud_.HandleInput(event);
+    switch (hudinputs){
+        case GUIInputs::NONE:
+            break;
+    }
+
+    // Map takes next precedence
+    map_.HandleInput(event);
+
+
+    // not handled by this or any children of this component
+    return output;
+
 }
 void GamePlay::load(sf::RenderWindow& window){
     // load the gameplay
@@ -676,6 +225,12 @@ void Viewport::update(double dt){
     // update x & y
     SetX(new_x + dx * dt);
     SetY(new_y + dy * dt);
+}
+void Viewport::UpdateMousePosition(){
+    // update the mouse position
+    auto mouse_pos = sf::Mouse::getPosition(*window_ptr_);
+    map_mouse_x_ = ConvertPixelToMeterX(*window_ptr_, mouse_pos.x);
+    map_mouse_y_ = ConvertPixelToMeterY(*window_ptr_, mouse_pos.y);
 }
 double Viewport::GetPixelsPerMeterX(sf::RenderWindow& window){
     // get pixels per meter x
@@ -886,6 +441,11 @@ void Map::SelectObject(double x, double y){
         } else {
             selected_tile_ptr_ = std::shared_ptr<Tile>(tile);
         }
+    }
+
+    // print dynamic object details
+    for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_){
+        std::cout << "Selected dynamic object: " << dynamic_object_ptr->footprint_.x_ << ", " << dynamic_object_ptr->footprint_.y_ << std::endl;
     }
 }
 void Map::SelectDynamicObject(double x, double y){

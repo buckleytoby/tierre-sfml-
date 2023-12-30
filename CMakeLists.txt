@@ -14,6 +14,7 @@ include_directories(include)
 
 add_executable(CMakeSFMLProject 
     src/gameplay.cpp
+    src/gui.cpp
     src/items.cpp
     src/main.cpp
     src/senses.cpp

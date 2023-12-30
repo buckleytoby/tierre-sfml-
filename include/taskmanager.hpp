@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <iostream>
 
 
 enum class ActionTypes {
@@ -44,6 +45,7 @@ class Task
     public:
         std::vector<ActionPtr> actions_;
         int active_action_{0};
+        std::string task_name_;
 
         void update(double dt);
         void IncrementActiveAction();

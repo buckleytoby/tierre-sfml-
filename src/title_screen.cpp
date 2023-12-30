@@ -40,8 +40,8 @@ void TitleScreen::draw(sf::RenderWindow& window){
 void TitleScreen::update(double dt){
 
 }
-BitFlag TitleScreen::handleInput(sf::Event& event){
-    BitFlag handleInputFlags;
+GameScreenInputs TitleScreen::HandleInput(sf::Event& event){
+    GameScreenInputs output = GameScreenInputs::NONE;
     // handle input for the title screen
     switch (event.type){
         // key pressed
@@ -49,11 +49,11 @@ BitFlag TitleScreen::handleInput(sf::Event& event){
             switch (event.key.scancode){
                 case sf::Keyboard::Scan::Escape:
                     std::cout << "Quit" << std::endl;
-                    handleInputFlags.SetFlag((EFlagValue)HandleInputActions::QUIT);
+                    return GameScreenInputs::QUIT;
                     break;
                 case sf::Keyboard::Scan::Space:
                     std::cout << "Change active gamescreen GamePlay" << std::endl;
-                    handleInputFlags.SetFlag((EFlagValue)HandleInputActions::CHANGEACTIVEGAMESCREENGAMEPLAY);
+                    return GameScreenInputs::CHANGEACTIVEGAMESCREENGAMEPLAY;
                     break;
                 default:
                     break;
@@ -63,7 +63,7 @@ BitFlag TitleScreen::handleInput(sf::Event& event){
             break;
     }
 
-    return handleInputFlags;
+    return output;
 }
 void TitleScreen::load(sf::RenderWindow& window){
     // load the title screen
