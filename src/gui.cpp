@@ -1,6 +1,4 @@
-#include "gui_elements.hpp"
 #include "gameplay.hpp"
-
 
 // Hard Coded Enum Names
 const std::string to_full_name(ResourceTypes p){
@@ -124,128 +122,13 @@ const std::string to_full_string(RecipeTypes p){
 }
 //////////////////////////////////////////////////////////////////////
 
-////////////////////////////// Dropdown //////////////////////////////
-Dropdown::Dropdown(){
-    // load font
-    if (!font_.loadFromFile("c:\\Windows\\Fonts\\arial.ttf"))
-    {
-        return;
-    }
-
-}
-void Dropdown::GenerateShapes(){
-    // reset width and height
-    total_width_ = 0;
-    total_height_ = 0;
-    // resize texts_
-    texts_.resize(items_.size());
-    shapes_.resize(items_.size());
-
-    // iterate through items_
-    for (int i=0; i<items_.size(); i++){
-        // make text
-        sf::Text text;
-        text.setFont(font_);
-        text.setCharacterSize(item_height_);
-        text.setString(items_[i]);
-        if (i == highlighted_idx_){
-            text.setFillColor(sf::Color::Black);
-        } else {
-            text.setFillColor(sf::Color::White);
-        }
-
-        // get text size
-        sf::FloatRect textRect = text.getLocalBounds();
-
-        // set in vector
-        texts_[i] = text;
-        if (textRect.width > total_width_){
-            total_width_ = textRect.width;
-        }
-        total_height_ += textRect.height + border_height_;
-    }
-    
-    int height = 0;
-    // iterate through texts and make rects
-    for (int i=0; i<texts_.size(); i++){
-        auto textRect = texts_[i].getLocalBounds();
-
-        // make rect
-        sf::RectangleShape shape(textRect.getSize());
-        shape.setOutlineThickness(10);
-            shape.setOutlineColor(sf::Color::Blue);
-        if (i == highlighted_idx_){
-            shape.setFillColor(sf::Color::White);
-        } else {
-            shape.setFillColor(sf::Color::Black);
-        }
-
-        // set the positions
-        shape.setPosition(0, height);
-        texts_[i].setPosition(0, height + border_height_);
-        height += textRect.height + border_height_;
-    }
-}
-
-SFRenderTexturePtr Dropdown::Draw(double x, double y){
-    if (mustDraw){
-        // reset texture_
-        texture_ = std::make_shared<sf::RenderTexture>();
-
-        if (!texture_->create(total_width_, total_height_)){
-            return nullptr;
-        }
-
-        // drawing uses the same functions
-        texture_->clear();
-
-        // iterate through items & shapes
-        for (int i=0; i<items_.size(); i++){
-            // draw rect
-            texture_->draw(shapes_[i]);
-            // draw the text on top
-            texture_->draw(texts_[i]);
-        }
-        return texture_;
-    } else {
-        return texture_;
-    }
-}
-bool Dropdown::IsInside(sf::Vector2u pt, sf::Vector2u pos, sf::Vector2u size){
-    if (pt.x > pos.x && pt.x < size.x && pt.y > pos.y && pt.y < size.y){
-        return true;
-    } else {
-        return false;
-    }
-}
-bool Dropdown::IsInTexture(sf::Vector2u pt){
-    sf::Vector2u pos(0.0, 0.0);
-    sf::Vector2u size = texture_->getSize();
-    return IsInside(pt, pos, size);
-}
-void Dropdown::Update(double parent_x, double parent_y){
-    // take parent x, y, convert to local x, y, see if within bounds, see which item it's in
-    auto local_x = parent_x - parent_x_;
-    auto local_y = parent_y - parent_y_;
-
-    sf::Vector2u pt(local_x, local_y);
-    
-    if (IsInTexture(pt)){
-        // iterate through items
-        for (int i=0; i<texts_.size(); i++){
-            auto bound = texts_[i].getGlobalBounds();
-            if (bound.contains(local_x, local_y)){
-                highlighted_idx_ = i;
-            }
-        }
-    } else {
-        highlighted_idx_ = -1;
-    }
-}
 
 ////////////////////////////// GUI //////////////////////////////
 void GUI::Update(double dt){
-    
+    // update all widgets
+    for (auto& widget: widgets_){
+        widget->Update(dt, mouse_x_, mouse_y_);
+    }
 }
 void GUI::Draw(sf::RenderWindow& window){
     /*
@@ -420,6 +303,7 @@ void GUI::Draw(sf::RenderWindow& window){
                 auto task = worker->task_manager_.active_task_;
                 str += "\nActive task: " + task->task_name_;
 
+
             }
 
 
@@ -504,12 +388,29 @@ void GUI::Draw(sf::RenderWindow& window){
     text.setStyle(sf::Text::Bold);
     window.draw(text);
 
+    // draw all widgets
+    for (auto& widget: widgets_){
+        widget->draw(window, sf::Transform::Identity);
+    }
+
 }
 
 GUIInputs GUI::HandleInput(sf::Event& event){
     // GUI level input handling
-    // [none for now]
-    return GUIInputs::NONE;
+    GUIInputs output = GUIInputs::NONE;
+
+    // iterate through widgets
+    for (auto& widget: widgets_){
+        // handle input for each widget
+        auto widget_input = widget->HandleInput(event);
+        if (widget_input == WidgetInputs::HANDLED){
+            output = GUIInputs::HANDLED;
+        }
+    }
+
+    
+    
+    return output;
 }
 
 

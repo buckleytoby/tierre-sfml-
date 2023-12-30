@@ -8,7 +8,7 @@
 #include "senses.hpp"
 #include "map.hpp"
 #include "tiles.hpp"
-#include "gui_elements.hpp"
+#include "widgets.hpp"
 
 const std::string to_full_name(ResourceTypes p);
 const std::string to_string(ResourceTypes p);
@@ -45,6 +45,7 @@ class Viewport {
     public:
         double x_{0}, y_{0}, width_{0}, height_{0}; // in meters
         double map_mouse_x_{0}, map_mouse_y_{0}; // in meters
+        double mouse_x_{0}, mouse_y_{0}; // in pixels
         BitFlag viewport_actions_{0};
         double scroll_sensitivity_{1.0}; // m/s
         double zoom_sensitivity_{5.0}; // m per tick, width
@@ -102,14 +103,14 @@ enum class GUIActions
 enum class GUIInputs
 {
     NONE,
-    VIEWPORT,
-    MAP,
-    HUD
+    HANDLED,
 };
 
 class GUI
 {
     public:
+        std::vector<WidgetPtr> widgets_;
+        double mouse_x_{0}, mouse_y_{0}; // in meters
         MapPtr map_ref_{nullptr};
         ViewportPtr viewport_ref_{nullptr};
         sf::Font font_;
@@ -117,6 +118,8 @@ class GUI
         void Draw(sf::RenderWindow& window);
         GUIInputs HandleInput(sf::Event& event);
         void Update(double dt);
+        void SetMousePosition(double x, double y){mouse_x_ = x; mouse_y_ = y;}
+        void AddWidget(WidgetPtr widget_ptr){widgets_.push_back(widget_ptr);}
 };
 
 class GamePlay : GameScreen

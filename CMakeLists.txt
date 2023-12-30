@@ -12,6 +12,11 @@ FetchContent_MakeAvailable(SFML)
 
 include_directories(include)
 
+### widget source files
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/widgets/*.cpp)
+message(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+message(SRC_FILES="${SRC_FILES}")
+
 add_executable(CMakeSFMLProject 
     src/gameplay.cpp
     src/gui.cpp
@@ -19,8 +24,10 @@ add_executable(CMakeSFMLProject
     src/main.cpp
     src/senses.cpp
     src/skills.cpp
+    src/start_state.cpp
     src/taskmanager.cpp
     src/title_screen.cpp
+    ${SRC_FILES}
     )
 target_link_libraries(CMakeSFMLProject PRIVATE sfml-graphics)
 target_compile_features(CMakeSFMLProject PRIVATE cxx_std_17)
