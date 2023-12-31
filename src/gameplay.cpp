@@ -61,7 +61,7 @@ GameScreenInputs GamePlay::HandleInput(sf::Event& event){
         case GUIInputs::NONE:
             break;
         case GUIInputs::HANDLED:
-            return GameScreenInputs::NONE;
+            return GameScreenInputs::HANDLED;
             break;
     }
 
@@ -932,7 +932,7 @@ void Worker::InferAction(double dt){
 }
 void Worker::ExecuteTask(double dt){
     // Execute a task
-    task_manager_.Execute(dt);
+    task_ptr_->update(dt);
 
     // Revert to executing task. Bit of a hack.
     SetState(WorkerStates::EXECUTINGTASK);
@@ -955,7 +955,7 @@ void Worker::MakeTask1(){
     std::vector<std::string> task_actions_ = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
     std::vector<WorkerStates> task_start_states = {WorkerStates::ACTIVE, WorkerStates::ACTIVE, WorkerStates::MOVING, WorkerStates::ACTIVE};
     
-    TaskPtr task = std::make_shared<Task>();
+    TaskPtr task = std::make_shared<Task>("Example Task Worker");
     for (int i=0; i<task_actions_.size(); i++){
             
         auto update_fcn = [this, task_actions_, task_start_states, i](){
@@ -980,8 +980,6 @@ void Worker::MakeTask1(){
         action1->SetSuccessCallback(success_fcn);
         task->AddAction(action1);
     }
-    // add to task manager
-    task_manager_.AddTask(task);
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////
 

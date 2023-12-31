@@ -21,6 +21,8 @@ double eucl_dist(XY<T> xy1, XY<T> xy2){
 extern int FRAMERATE;
 extern double DELTATIME; // tie physics to framerate
 extern int PIXELS_PER_METER; // meters * PIXELS_PER_METER = pixels
+extern int SCREENWIDTH;
+extern int SCREENHEIGHT;
 
 enum class GamescreenStates {
     TITLE_SCREEN,

@@ -27,3 +27,8 @@ etc.
 * define enum class {classname}Inputs for each child class
 * For immediate changes: HandleInput enums / methods should execute immediate changes themselves.
 * For real-time changes: HandleInput methods should set bitflags in its class's {class}Actions enum. The class's update function then executes the appropriate functions based on the {class}Actions enum.
+
+## Callbacks
+Following this thread: https://stackoverflow.com/questions/2298242/callback-functions-in-c
+* use callbacks in the GUi tree to update other objects without requiring upstream knowledge of parent classes.
+* recursive callback calling for nested children of widgets?

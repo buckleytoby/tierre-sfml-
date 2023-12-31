@@ -191,7 +191,7 @@ class Worker : public DynamicObject
             {"MoveTowardsGoal", std::bind(&Worker::MoveTowardsGoal, this)},
             {"TransferInventory", std::bind(&Worker::TransferInventory, this)},
         };
-        TaskManager task_manager_;
+        TaskPtr task_ptr_{nullptr};
         void ExecuteTask(double dt);
 
         // Pre-built test tasks

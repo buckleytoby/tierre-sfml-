@@ -47,11 +47,14 @@ class Task
         int active_action_{0};
         std::string task_name_;
 
+        Task(std::string name){task_name_ = name;}
+
         void update(double dt);
         void IncrementActiveAction();
         void AddAction(ActionPtr action){actions_.push_back(action);}
         void Reset(){active_action_ = 0;}
         void Clear(){actions_.clear(); Reset();}
+        std::vector<std::string> GetActionNames();
 };
 typedef std::shared_ptr<Task> TaskPtr;
 
@@ -62,12 +65,18 @@ class TaskManager
 {
     public:
         std::vector<TaskPtr> tasks_;
-        TaskPtr active_task_{nullptr};
+        TaskPtr active_task_{nullptr}; // the one being edited
 
-        void Execute(double dt);
         void AddTask(TaskPtr task){tasks_.push_back(task);}
-        
+        void NewTask();
+        void RemoveTask(int idx);
+        void EditTask(int idx);
+
+        TaskManager(){}
+        std::vector<std::string> GetTaskNames();
+        std::vector<std::string> GetActiveTaskActionNames();
 };
+typedef std::shared_ptr<TaskManager> TaskManagerPtr;
 
 
 

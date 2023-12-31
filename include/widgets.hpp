@@ -1,11 +1,14 @@
 // include guard
-#ifndef GUI_HPP
-#define GUI_HPP
+#ifndef WIDGETS_HPP
+#define WIDGETS_HPP
 
 #include <string>
 #include <vector>
 #include <iostream>
+#include <functional>
 #include <SFML/Graphics.hpp>
+#include "utils.hpp"
+#include "taskmanager.hpp"
 
 typedef std::shared_ptr<sf::RenderTexture> SFRenderTexturePtr; 
 
@@ -20,25 +23,43 @@ class Widget
 {
 public:
     bool highlighted_{false};
+    bool clicked_{false};
+    bool visible_{true};
     sf::Rect<double> bounds_{0, 0, 0, 0}; // left & top should be same as the transform_ origin
     sf::Transform transform_{sf::Transform::Identity}; // transform_ is this widget's transform w.r.t. its immediate parent
     std::vector<std::shared_ptr<Widget>> children_;
 
+    // callback pointer holders
+    std::function<void()> onClick_cb_{nullptr};
+
+    // callback setters
+    void SetOnClickCallback(std::function<void()> cb){onClick_cb_ = cb;}
+
+    // core functions
+    Widget(double x, double y){transform_.translate(x, y); bounds_.left = x; bounds_.top = y;}
+    Widget(double x, double y, double width, double height){transform_.translate(x, y); bounds_.left = x; bounds_.top = y; bounds_.width = width; bounds_.height = height;}
     void draw(sf::RenderTarget& target, const sf::Transform& parentTransform) const;
     sf::Rect<double> CalculateBounds();
     void Finalize();
     double GetParentX();
     double GetParentY();
     void AddChild(std::shared_ptr<Widget> child){children_.push_back(child);}
+    WidgetInputs HandleInput(sf::Event& event);
+    void MakeVisible(){visible_ = true;}
+    void MakeInvisible(){visible_ = false;}
+    void ToggleVisibility(){visible_ = !visible_;}
     
     // virtuals
-    virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const=0;
+    virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {}
     virtual sf::Rect<double> onCalculateBounds() {return bounds_;}
     virtual void Update(double dt, double x, double y);
-    virtual WidgetInputs HandleInput(sf::Event& event){return WidgetInputs::NONE;}
+    virtual WidgetInputs onHandleInput(sf::Event& event){return WidgetInputs::NONE;}
+    virtual bool onClick();
+    virtual std::string GetID(){return "Widget";}
 
-};
+}; 
 typedef std::shared_ptr<Widget> WidgetPtr;
+WidgetPtr MakeWidget(double x, double y);
 
 // a simple derived class: a widget that draws a sprite
 class SpriteWidget : public Widget
@@ -56,23 +77,38 @@ public:
     sf::Sprite m_sprite;
 };
 
+class TextBox: public Widget
+{
+    public:
+        sf::Text text_;
+        std::string text_str_;
+        sf::Font font_;
+        double char_height_{30}; // pixels
+        double char_width_{18}; // 0.6 & char height
+        double text_width_{0};
+
+        TextBox(double x, double y, std::string str);
+        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+
+        // virtuals
+        virtual sf::Rect<double> onCalculateBounds();
+        virtual std::string GetID(){return "TextBox";}
+};
+typedef std::shared_ptr<TextBox> TextBoxPtr;
+
 class Button: public Widget
 {
     public:
         sf::RectangleShape shape_;
-        sf::Text text_;
-        std::string text_str_;
-        sf::Font font_;
         double border_height_{10}; // pixels
-        double char_height_{30}; // pixels
-        double char_width_{18}; // 0.6 & char height
-        double text_width_{0};
         virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
 
         Button(double x, double y, std::string str);
-        virtual sf::Rect<double> onCalculateBounds() override;
+        virtual sf::Rect<double> onCalculateBounds();
+        virtual std::string GetID(){return "Button";}
 };
 typedef std::shared_ptr<Button> ButtonPtr;
+ButtonPtr MakeButton(double x, double y, std::string str);
 
 class Dropdown: public Widget
 {
@@ -80,11 +116,33 @@ class Dropdown: public Widget
         Dropdown(double x, double y, std::vector<std::string> strs);
         void AddItem(std::string str);
         int GetHighlightedChild();
+        int GetClickedIdx();
         virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
         virtual WidgetInputs HandleInput(sf::Event& event);
+        // virtual bool onClick();
+        virtual std::string GetID(){return "Dropdown";}
 };
 typedef std::shared_ptr<Dropdown> DropdownPtr;
 
+class TaskManagerWidget: public Widget
+{
+    public:
+        TaskManagerPtr task_manager_ptr_;
+
+        // UI elements
+        ButtonPtr add_new_task;
+        ButtonPtr remove_task;
+        ButtonPtr edit_task;
+
+        DropdownPtr list_of_tasks;
+        DropdownPtr current_task;
+
+        TaskManagerWidget(double x, double y, double w, double h, TaskManagerPtr task_manager_ptr);
+        virtual void reDraw();
+        virtual std::string GetID(){return "TaskManagerWidget";}
+        // virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+};
+typedef std::shared_ptr<TaskManagerWidget> TaskManagerWidgetPtr;
 
 
 
@@ -93,5 +151,4 @@ typedef std::shared_ptr<Dropdown> DropdownPtr;
 
 
 
-
-#endif // GUI_HPP
+#endif // WIDGETS_HPP

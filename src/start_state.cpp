@@ -64,12 +64,42 @@ GamePlay::GamePlay(){
 
     map_.dynamic_object_ptrs_.push_back(std::unique_ptr<DynamicObject>((DynamicObject*)worker));
 
-    // test dropdown
-    auto dropdown = std::make_shared<Dropdown>(20, 500, std::vector<std::string>{"test1", "test2", "test3"});
-    hud_.AddWidget(dropdown);
+    // Make the task manager
+    task_manager_ptr_ = std::make_shared<TaskManager>();
+    // make example tasks
+    MakeTask1();
 
-    // finalize all widgets
-    for (auto& widget : hud_.widgets_){
-        widget->Finalize();
+    ////////////////////////// GUI STUFF //////////////////////////
+    auto esc = std::make_shared<TextBox>(0, 0, "Press ESC to go back to Title Screen");
+    esc->SetOnClickCallback([](){std::cout << "I've been clicked!"<<std::endl;});
+    // hud_.AddWidget(esc);
+
+    //// TASK MANAGER GUI
+    // make task manager widget
+    auto task_mgr_widget = std::make_shared<TaskManagerWidget>(300, 300, 300, 300, task_manager_ptr_);
+    // task_mgr_widget->MakeInvisible();
+    hud_.AddWidget(task_mgr_widget);
+
+    // task mgr open button
+    auto task_mgr_open_button = std::make_shared<Button>(50, 50, "Task Manager");
+    task_mgr_open_button->SetOnClickCallback([task_mgr_widget](){
+        task_mgr_widget->ToggleVisibility();
+    });
+    // hud_.AddWidget(task_mgr_open_button);
+    //// end task manager GUI
+
+
+    ////////////////////////// END GUI STUFF //////////////////////////
+}
+void GamePlay::MakeTask1(){
+    // example task, goes to closest building and empties inventory
+    std::vector<std::string> task_steps = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
+    
+    TaskPtr task = std::make_shared<Task>("Example Task 1");
+    for (int i=0; i<task_steps.size(); i++){
+        ActionPtr action1 = std::make_shared<Action>();
+        task->AddAction(action1);
     }
+    // add to task manager
+    task_manager_ptr_->AddTask(task);
 }

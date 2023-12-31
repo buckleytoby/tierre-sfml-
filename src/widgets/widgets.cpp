@@ -1,13 +1,29 @@
 #include "widgets.hpp"
 
+/////////////// shortcuts
+
+WidgetPtr MakeWidget(double x, double y){return std::make_shared<Widget>(x, y);}
+ButtonPtr MakeButton(double x, double y, std::string str){return std::make_shared<Button>(x, y, str);}
+
+
+
+
+
+/////////////// End SHortcuts
+
 void Widget::Update(double dt, double x, double y){
     
     // inputs: x, y are the mouse position w.r.t. the parent
     // update the widget
     if(bounds_.contains(x, y)){
-        highlighted_ = true;
+        if (!highlighted_){
+            highlighted_ = true;
+            std::cout << GetID() << " highlighted." << std::endl;
+        }
     } else {
-        highlighted_ = false;
+        if (highlighted_){
+            highlighted_ = false;
+        }
     }
 
     // update the children
@@ -16,6 +32,11 @@ void Widget::Update(double dt, double x, double y){
     }
 }
 void Widget::draw(sf::RenderTarget& target, const sf::Transform& parentTransform) const {
+    // if not visible, don't draw anything, including children
+    if (!visible_){
+        return;
+    }
+
     // combine the parent transform with the widget's one
     sf::Transform combinedTransform = parentTransform * transform_;
 
@@ -87,4 +108,47 @@ double Widget::GetParentX(){
 }
 double Widget::GetParentY(){
     return transform_.getMatrix()[13];
+}
+WidgetInputs Widget::HandleInput(sf::Event& event){
+    // handle the input
+    // only interact if the widget is visible, highlighted, and  left-clicked
+    // return HANDLED if the input is handled, NONE otherwise
+    if (visible_){
+        if(wasLeftClicked(event)){
+            if (highlighted_){
+                clicked_ = true;
+
+                // since children are drawn on top of the parent, iterate through children first and give them precedence, handle the input
+                for (auto& child: children_){
+                    auto input = child->HandleInput(event);
+                    if (input == WidgetInputs::HANDLED){
+                        return WidgetInputs::HANDLED;
+                    }
+                }
+
+                // if no children handle the click, execute this widget's onClick and return handled
+                if (onClick()){
+                    return WidgetInputs::HANDLED;
+                } else {
+                    return WidgetInputs::NONE;
+                }
+            }
+        }
+    } else {
+        clicked_ = false;
+        return WidgetInputs::NONE;
+    }
+
+    return WidgetInputs::NONE;
+}
+bool Widget::onClick(){
+    // debug
+    std::cout << GetID() << " clicked." << std::endl;
+    // call the callback
+    if (onClick_cb_ == nullptr){
+        return false;
+    } else {
+        onClick_cb_(); // TODO: force the onClick_cb_ to return a bool for success
+        return true;
+    }
 }

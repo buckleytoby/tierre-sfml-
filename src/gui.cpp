@@ -1,4 +1,5 @@
 #include "gameplay.hpp"
+#include "gui.hpp"
 
 // Hard Coded Enum Names
 const std::string to_full_name(ResourceTypes p){
@@ -160,17 +161,6 @@ void GUI::Draw(sf::RenderWindow& window){
         return;
     }
 
-    // update the title screen
-    sf::Text text;
-    text.setFont(font_); // font is a sf::Font
-    text.setString("Press ESC to go back to Title Screen");
-    text.setCharacterSize(24); // in pixels, not points!
-    // text.setOrigin(0, -5); // moves the text down 5 pixels
-    text.setPosition(10, 10);
-    text.setFillColor(sf::Color::Red);
-    text.setStyle(sf::Text::Bold | sf::Text::Underlined);
-    window.draw(text);
-
     // iterate through the viewport, size + 1 to draw the tiles on the edge
     for (int i=viewport_ref_->GetIntX(); i<viewport_ref_->GetIntWidth()+1; i++){
         for (int j=viewport_ref_->GetIntY(); j<viewport_ref_->GetIntHeight()+1; j++){
@@ -276,12 +266,14 @@ void GUI::Draw(sf::RenderWindow& window){
             }
             // if executing task, add task progress
             else if (worker->worker_state_ == WorkerStates::EXECUTINGTASK){
-                str += "\nExecuting Task Progress: \n";
-                for (int i=0; i<worker->task_manager_.active_task_->actions_.size(); i++){
-                    if (i == worker->task_manager_.active_task_->active_action_){
-                        str += ">> ";
+                if (worker->task_ptr_ != nullptr){
+                    str += "\nExecuting Task Progress: \n";
+                    for (int i=0; i<worker->task_ptr_->actions_.size(); i++){
+                        if (i == worker->task_ptr_->active_action_){
+                            str += ">> ";
+                        }
+                        str += worker->task_ptr_->actions_[i]->to_string() + "\n";
                     }
-                    str += worker->task_manager_.active_task_->actions_[i]->to_string() + "\n";
                 }
             }
             // add needs
@@ -293,15 +285,9 @@ void GUI::Draw(sf::RenderWindow& window){
                 str += ", ";
             }
 
-            // add task manager details
-            str += "\nTask Manager:\n Available Tasks:\n";
-            for (auto& task: worker->task_manager_.tasks_){
-                str += " " + task->task_name_ + "\n";
-            }
             // active task
-            if (worker->task_manager_.active_task_ != nullptr){
-                auto task = worker->task_manager_.active_task_;
-                str += "\nActive task: " + task->task_name_;
+            if (worker->task_ptr_ != nullptr){
+                str += "\nActive task: " + worker->task_ptr_->task_name_;
 
 
             }
@@ -380,6 +366,7 @@ void GUI::Draw(sf::RenderWindow& window){
     }
     
     // draw the string
+    sf::Text text;
     text.setFont(font);
     text.setString(str);
     text.setPosition(20, 130);
@@ -399,17 +386,14 @@ GUIInputs GUI::HandleInput(sf::Event& event){
     // GUI level input handling
     GUIInputs output = GUIInputs::NONE;
 
-    // iterate through widgets
+    // iterate through widgets. Only 1 widget can handle an input so we can early exit
     for (auto& widget: widgets_){
         // handle input for each widget
         auto widget_input = widget->HandleInput(event);
         if (widget_input == WidgetInputs::HANDLED){
-            output = GUIInputs::HANDLED;
+            return GUIInputs::HANDLED;
         }
     }
-
-    
-    
     return output;
 }
 
@@ -574,3 +558,13 @@ WorkerInputs Worker::HandleInput(sf::Event& event){
 
     return output;
 }
+
+HUD::HUD(){
+}
+// void HUD::Draw(sf::RenderWindow& window){
+//     // draw everything else
+//     inherited::Draw(window);
+
+//     // draw the task manager on top (if visible)
+//     task_manager_panel_ptr_->draw(window, sf::Transform::Identity);
+// }
