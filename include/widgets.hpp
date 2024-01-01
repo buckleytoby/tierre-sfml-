@@ -9,6 +9,7 @@
 #include <SFML/Graphics.hpp>
 #include "utils.hpp"
 #include "taskmanager.hpp"
+#include "map.hpp"
 
 typedef std::shared_ptr<sf::RenderTexture> SFRenderTexturePtr; 
 
@@ -36,8 +37,8 @@ public:
     void SetOnClickCallback(std::function<void()> cb){onClick_cb_ = cb;}
 
     // core functions
-    Widget(double x, double y){transform_.translate(x, y); bounds_.left = x; bounds_.top = y;}
-    Widget(double x, double y, double width, double height){transform_.translate(x, y); bounds_.left = x; bounds_.top = y; bounds_.width = width; bounds_.height = height;}
+    Widget(double x, double y);
+    Widget(double x, double y, double width, double height);
     void draw(sf::RenderTarget& target, const sf::Transform& parentTransform) const;
     sf::Rect<double> CalculateBounds();
     void Finalize();
@@ -96,6 +97,21 @@ class TextBox: public Widget
 };
 typedef std::shared_ptr<TextBox> TextBoxPtr;
 
+class RectWidget: public Widget
+{
+    public:
+        sf::RectangleShape shape_;
+        double border_height_{10}; // pixels
+        virtual void onDraw(sf::RenderTarget &target, const sf::Transform &transform) const;
+
+        RectWidget(double x, double y, double w, double h);
+        
+        virtual sf::Rect<double> onCalculateBounds();
+        virtual std::string GetID(){return "RectWidget";}
+
+};
+typedef std::shared_ptr<RectWidget> RectWidgetPtr;
+
 class Button: public Widget
 {
     public:
@@ -130,25 +146,42 @@ class TaskManagerWidget: public Widget
         TaskManagerPtr task_manager_ptr_;
 
         // UI elements
+        RectWidgetPtr border;
         ButtonPtr add_new_task;
         ButtonPtr remove_task;
         ButtonPtr edit_task;
 
         DropdownPtr list_of_tasks;
         DropdownPtr current_task;
+        DropdownPtr list_of_actions; // including custom tasks
+        ButtonPtr add_action;
+        ButtonPtr remove_action;
 
-        TaskManagerWidget(double x, double y, double w, double h, TaskManagerPtr task_manager_ptr);
+        TaskManagerWidget(double x, double y, TaskManagerPtr task_manager_ptr);
         virtual void reDraw();
         virtual std::string GetID(){return "TaskManagerWidget";}
         // virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+        virtual bool onClick();
 };
 typedef std::shared_ptr<TaskManagerWidget> TaskManagerWidgetPtr;
 
+class SelectedStatus: public Widget
+{
+    public:
+        MapPtr map_ref_;
+        TaskManagerPtr task_manager_ptr_;
+        DynamicObjectPtr selected_unit_ptr_{nullptr};
+        RectWidgetPtr border_;
+        TextBoxPtr text_;
+        ButtonPtr button_active_task_;
+        DropdownPtr tasks_list_;
 
+        SelectedStatus(double x, double y, double w, double h, MapPtr map_ref, TaskManagerPtr task_manager_ptr);
 
-
-
-
-
+        // virtuals
+        virtual void Update(double dt, double x, double y);
+        virtual void reDraw();
+        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+};
 
 #endif // WIDGETS_HPP

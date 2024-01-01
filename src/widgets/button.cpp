@@ -12,7 +12,7 @@ void Button::onDraw(sf::RenderTarget& target, const sf::Transform& transform) co
 
     // make rect
     sf::RectangleShape shape(sf::Vector2f(textRect.width, textRect.height));
-    shape.setOutlineThickness(10);
+    shape.setOutlineThickness(border_height_);
     shape.setOutlineColor(sf::Color::Blue);
     if (highlighted_){
         shape.setFillColor(sf::Color::White);

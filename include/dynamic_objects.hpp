@@ -192,6 +192,7 @@ class Worker : public DynamicObject
             {"TransferInventory", std::bind(&Worker::TransferInventory, this)},
         };
         TaskPtr task_ptr_{nullptr};
+        void SetTask(TaskPtr ptr){task_ptr_ = ptr;}
         void ExecuteTask(double dt);
 
         // Pre-built test tasks

@@ -29,7 +29,7 @@ class Map {
         double mouse_x_{0}, mouse_y_{0}; // in meters
         std::vector<std::vector<std::shared_ptr<Tile>>> tiles_array_;
         std::vector<std::shared_ptr<DynamicObject>> dynamic_object_ptrs_;
-        std::vector<std::shared_ptr<DynamicObject>> selected_dynamic_object_ptrs_;
+        std::vector<DynamicObjectPtr> selected_dynamic_object_ptrs_;
         std::shared_ptr<Tile> selected_tile_ptr_;
 
         void SetWidth(int width);
@@ -47,6 +47,15 @@ class Map {
         void SelectDynamicObject(double x, double y);
         void MakeBuilding(BuildingTypes building_type, double x, double y);
         void MakeWorker(double x, double y);
+        std::vector<DynamicObjectPtr> GetSelectedObjects(){return selected_dynamic_object_ptrs_;}
+        DynamicObjectPtr GetFirstSelectedObject(){
+            if (selected_dynamic_object_ptrs_.size() > 0){
+                return selected_dynamic_object_ptrs_[0];
+            } else {
+                return nullptr;
+            }
+        }
+
 
         // Passthroughs
         void SetAttention(DynamicObjectPtr ptr, double x, double y);

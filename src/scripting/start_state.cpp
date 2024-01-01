@@ -71,13 +71,15 @@ GamePlay::GamePlay(){
 
     ////////////////////////// GUI STUFF //////////////////////////
     auto esc = std::make_shared<TextBox>(0, 0, "Press ESC to go back to Title Screen");
-    esc->SetOnClickCallback([](){std::cout << "I've been clicked!"<<std::endl;});
-    // hud_.AddWidget(esc);
+    hud_.AddWidget(esc);
+
+    // selected unit status
+    auto selected = std::make_shared<SelectedStatus>(300, 200, 300, 600, map_ref_, task_manager_ptr_)
 
     //// TASK MANAGER GUI
     // make task manager widget
-    auto task_mgr_widget = std::make_shared<TaskManagerWidget>(300, 300, 300, 300, task_manager_ptr_);
-    // task_mgr_widget->MakeInvisible();
+    auto task_mgr_widget = std::make_shared<TaskManagerWidget>(300, 200, task_manager_ptr_);
+    task_mgr_widget->MakeInvisible();
     hud_.AddWidget(task_mgr_widget);
 
     // task mgr open button
@@ -85,7 +87,7 @@ GamePlay::GamePlay(){
     task_mgr_open_button->SetOnClickCallback([task_mgr_widget](){
         task_mgr_widget->ToggleVisibility();
     });
-    // hud_.AddWidget(task_mgr_open_button);
+    hud_.AddWidget(task_mgr_open_button);
     //// end task manager GUI
 
 
@@ -102,4 +104,5 @@ void GamePlay::MakeTask1(){
     }
     // add to task manager
     task_manager_ptr_->AddTask(task);
+    task_manager_ptr_->EditTask(0);
 }

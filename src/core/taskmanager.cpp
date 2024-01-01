@@ -1,12 +1,7 @@
 #include "taskmanager.hpp"
 
 
-////////////////////////////// Action //////////////////////////////
-void Action::update(double dt){
-    // call the callback
-    update_callback_();
-}
-const std::string Action::to_string(){
+const std::string to_string(ActionTypes action_type_){
     switch (action_type_){
         case ActionTypes::Default:
             return "Default";
@@ -22,32 +17,57 @@ const std::string Action::to_string(){
             return "Unknown";
     }
 }
+////////////////////////////// Action //////////////////////////////
+void Action::update(double dt){
+    // call the callback
+    update_callback_();
+}
+const std::string Action::to_string(){
+    return to_string(action_type_);
+}
 ////////////////////////////// End Action //////////////////////////////
+SetGoalToBuilding::SetGoalToBuilding(int building_id){
+    universal_ids_.push_back(building_id);
+}
 ////////////////////////////// Task //////////////////////////////
 void Task::update(double dt){
-    // update the active action
+    // update the active action, recursion if action is a task
     actions_[active_action_]->update(dt);
     // test success criteria
     if(actions_[active_action_]->IsComplete()){
         IncrementActiveAction();
     }
 }
+bool Task::IsComplete(){
+    // Method called in the update recursion.
+
+    if (active_action_ == 0 && active_action_ != prior_action_){
+        return true;
+    } else {
+        return false;
+    }
+}
 void Task::IncrementActiveAction(){
+    prior_action_ = active_action_;
     active_action_ = (active_action_ + 1) % actions_.size();
 }
 std::vector<std::string> Task::GetActionNames(){
     std::vector<std::string> action_names;
     for (auto action: actions_){
-        action_names.push_back(action->to_string());
+        action_names.push_back(action->GetName());
     }
     return action_names;
+}
+void Task::NewAndAddAction(ActionTypes type){
+    auto action = std::make_shared<Action>(type);
+    AddAction(action);
 }
 ////////////////////////////// End Task //////////////////////////////
 ////////////////////////////// TaskManager //////////////////////////////
 std::vector<std::string> TaskManager::GetTaskNames(){
     std::vector<std::string> task_names;
     for (auto task: tasks_){
-        task_names.push_back(task->task_name_);
+        task_names.push_back(task->GetName());
     }
     return task_names;
 }
@@ -76,5 +96,19 @@ void TaskManager::EditTask(int idx){
         return;
     }
     active_task_ = tasks_[idx];
+}
+std::vector<std::string> TaskManager::GetActionsAndTasks(){
+    std::vector<std::string> out;
+
+    // iterate through all ActionTypes enum
+    for (auto type: ActionTypes){
+        out.push_back(to_string(type));
+    }
+
+    // iterate through all custom tasks
+    for (auto& taskptr: tasks_){
+        out.push_back(taskptr->GetName());
+    }
+    return out;
 }
 ////////////////////////////// End TaskManager //////////////////////////////

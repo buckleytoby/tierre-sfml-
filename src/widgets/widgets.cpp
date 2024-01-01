@@ -10,6 +10,19 @@ ButtonPtr MakeButton(double x, double y, std::string str){return std::make_share
 
 
 /////////////// End SHortcuts
+Widget::Widget(double x, double y){
+    transform_ = sf::Transform::Identity;
+    transform_.translate(x, y);
+    bounds_.left = x;
+    bounds_.top = y;
+    CalculateBounds();
+}
+Widget::Widget(double x, double y, double width, double height){
+    Widget(x, y);
+    bounds_.width = width;
+    bounds_.height = height;
+    CalculateBounds();
+}
 
 void Widget::Update(double dt, double x, double y){
     
@@ -28,7 +41,9 @@ void Widget::Update(double dt, double x, double y){
 
     // update the children
     for (auto& child: children_){
-        child->Update(dt, x - bounds_.left, y - bounds_.top);
+        if (child != nullptr){
+            child->Update(dt, x - bounds_.left, y - bounds_.top);
+        }
     }
 }
 void Widget::draw(sf::RenderTarget& target, const sf::Transform& parentTransform) const {
@@ -45,7 +60,9 @@ void Widget::draw(sf::RenderTarget& target, const sf::Transform& parentTransform
 
     // draw its children
     for (auto& child: children_){
-        child->draw(target, combinedTransform);
+        if (child != nullptr){
+            child->draw(target, combinedTransform);
+        }
     }
 }
 
