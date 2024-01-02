@@ -2,7 +2,9 @@
 #ifndef RESOURCES_HPP
 #define RESOURCES_HPP
 
+#include <string>
 #include <algorithm>
+#include "sfml/Graphics.hpp"
 
 enum class ResourceTypes {
     NONE,
@@ -12,6 +14,9 @@ enum class ResourceTypes {
     GRASS,
     CORN,
 };
+const std::string to_string(ResourceTypes p);
+const std::string to_full_string(ResourceTypes p);
+const sf::Color to_color(ResourceTypes p);
 
 class Resource
 {

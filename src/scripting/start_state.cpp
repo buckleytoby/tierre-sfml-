@@ -74,7 +74,8 @@ GamePlay::GamePlay(){
     hud_.AddWidget(esc);
 
     // selected unit status
-    auto selected = std::make_shared<SelectedStatus>(300, 200, 300, 600, map_ref_, task_manager_ptr_)
+    auto selected = std::make_shared<SelectedStatus>(300, 200, 300, 600, hud_.map_ref_, task_manager_ptr_);
+    hud_.AddWidget(selected);
 
     //// TASK MANAGER GUI
     // make task manager widget
@@ -95,11 +96,17 @@ GamePlay::GamePlay(){
 }
 void GamePlay::MakeTask1(){
     // example task, goes to closest building and empties inventory
-    std::vector<std::string> task_steps = {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
+    std::vector<ActionTypes> actions = // {"SelectClosestBuilding", "SetGoalToSelectedBuilding", "MoveTowardsGoal", "TransferInventory"};
+    {
+        ActionTypes::SelectClosestBuilding,
+        ActionTypes::SetGoalToSelectedBuilding,
+        ActionTypes::MoveTowardsGoal,
+        ActionTypes::TransferInventory
+    };
     
     TaskPtr task = std::make_shared<Task>("Example Task 1");
-    for (int i=0; i<task_steps.size(); i++){
-        ActionPtr action1 = std::make_shared<Action>();
+    for (int i=0; i<actions.size(); i++){
+        ActionPtr action1 = std::make_shared<Action>(actions[i]);
         task->AddAction(action1);
     }
     // add to task manager

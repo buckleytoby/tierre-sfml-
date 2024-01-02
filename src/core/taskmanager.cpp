@@ -22,13 +22,16 @@ void Action::update(double dt){
     // call the callback
     update_callback_();
 }
-const std::string Action::to_string(){
-    return to_string(action_type_);
-}
-////////////////////////////// End Action //////////////////////////////
 SetGoalToBuilding::SetGoalToBuilding(int building_id){
     universal_ids_.push_back(building_id);
 }
+void SetGoalToBuilding::update(double dt){
+    // get building ptr from id
+    // auto building_ptr = GetBuildingPtrFromId(universal_ids_[0]);
+    // // set goal to building center
+    // SetGoal(building_ptr->GetCenter().x_, building_ptr->GetCenter().y_);
+}
+////////////////////////////// End Action //////////////////////////////
 ////////////////////////////// Task //////////////////////////////
 void Task::update(double dt){
     // update the active action, recursion if action is a task
@@ -101,8 +104,8 @@ std::vector<std::string> TaskManager::GetActionsAndTasks(){
     std::vector<std::string> out;
 
     // iterate through all ActionTypes enum
-    for (auto type: ActionTypes){
-        out.push_back(to_string(type));
+    for (int i=0; i<static_cast<int>(ActionTypes::end); i++){
+        out.push_back(to_string(static_cast<ActionTypes>(i)));
     }
 
     // iterate through all custom tasks

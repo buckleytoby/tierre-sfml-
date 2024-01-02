@@ -17,7 +17,7 @@ void Dropdown::AddItem(std::string str){
 
     };
     // x, y is w.r.t. parent
-    auto button = std::make_shared<Button>(0, bounds_.height, str);
+    auto button = std::make_shared<Button>(0, bounds_.height + 10, str);
     button->SetOnClickCallback(button_cb);
     AddChild(button);
     CalculateBounds();

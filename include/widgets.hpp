@@ -10,6 +10,11 @@
 #include "utils.hpp"
 #include "taskmanager.hpp"
 #include "map.hpp"
+#include "resources.hpp"
+#include "items.hpp"
+#include "recipes.hpp"
+#include "buildings.hpp"
+#include "dynamic_objects.hpp"
 
 typedef std::shared_ptr<sf::RenderTexture> SFRenderTexturePtr; 
 
@@ -84,8 +89,8 @@ class TextBox: public Widget
         sf::Text text_;
         std::string text_str_;
         sf::Font font_;
-        double char_height_{30}; // pixels
-        double char_width_{18}; // 0.6 & char height
+        double char_height_{15}; // pixels
+        double char_width_{15}; // 0.6 & char height
         double text_width_{0};
 
         TextBox(double x, double y, std::string str);
@@ -106,7 +111,6 @@ class RectWidget: public Widget
 
         RectWidget(double x, double y, double w, double h);
         
-        virtual sf::Rect<double> onCalculateBounds();
         virtual std::string GetID(){return "RectWidget";}
 
 };
@@ -116,7 +120,7 @@ class Button: public Widget
 {
     public:
         sf::RectangleShape shape_;
-        double border_height_{10}; // pixels
+        double border_height_{5}; // pixels
         virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
 
         Button(double x, double y, std::string str);

@@ -19,6 +19,10 @@ enum class BuildingStatus {
     OPERATING,
 };
 
+const std::string to_string(BuildingTypes p);
+const std::string to_full_string(BuildingTypes p);
+const std::string to_full_string(BuildingStatus p);
+
 class Building {
     public:
         Rect<double> footprint_{0, 0, 1, 1};

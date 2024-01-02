@@ -23,9 +23,10 @@ void SelectedStatus::Update(double dt, double x, double y){
     }
 
     //// redraw all the real-time stuff
+    std::string str = "";
     // make string for selected unit
     if (map_ref_->selected_dynamic_object_ptrs_.size() > 0){
-        std::string str = "Selected Object Status: \n";
+        str = "Selected Object Status: \n";
         auto dynamic_object_ptr = map_ref_->selected_dynamic_object_ptrs_[0];
 
         str += "Selected Unit: ";
@@ -45,7 +46,7 @@ void SelectedStatus::Update(double dt, double x, double y){
             str += to_string(worker->worker_state_);
             // if gathering, add gather progress
             if (worker->worker_state_ == WorkerStates::GATHERING){
-                str += "\nGathering " + to_full_name(worker->selected_resource_ptr_->resource_type_) + " Progress: ";
+                str += "\nGathering " + to_full_string(worker->selected_resource_ptr_->resource_type_) + " Progress: ";
                 str += std::to_string(worker->action_time_) + " / " + std::to_string(worker->selected_resource_ptr_->time_to_gather_);
             }
             // if executing task, add task progress
@@ -56,7 +57,7 @@ void SelectedStatus::Update(double dt, double x, double y){
                         if (i == worker->task_ptr_->active_action_){
                             str += ">> ";
                         }
-                        str += worker->task_ptr_->actions_[i]->to_string() + "\n";
+                        str += worker->task_ptr_->actions_[i]->GetName() + "\n";
                     }
                 }
             }
@@ -72,7 +73,6 @@ void SelectedStatus::Update(double dt, double x, double y){
 
         } else if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::GENERIC){
             str += "Generic";
-            break;
         }
         // add position
         str += "\nPos: " + std::to_string(dynamic_object_ptr->footprint_.x_);
@@ -95,7 +95,7 @@ void SelectedStatus::Update(double dt, double x, double y){
         // add resources
         str += "\nResources: ";
         for (auto& resource : map_ref_->selected_tile_ptr_->resource_map_){
-            str += to_full_name(resource.second->resource_type_);
+            str += to_full_string(resource.second->resource_type_);
             str += ": ";
             str += std::to_string(resource.second->GetTotal());
             str += ", ";

@@ -11,7 +11,6 @@
 #include "resources.hpp"
 #include "skills.hpp"
 #include "senses.hpp"
-#include "map.hpp"
 #include "taskmanager.hpp"
 
 // following this post: https://stackoverflow.com/a/6515232
@@ -86,11 +85,15 @@ enum class WorkerStates{
     CRAFTING,
     CRAFTINGIDLE,
 };
+const std::string to_string(WorkerStates p);
+const std::string to_full_string(WorkerStates p);
 enum class NeedsTypes{
     FOOD,
     SLEEP,
     WATER,
 };
+
+const std::string to_string(NeedsTypes p);
 
 class Need
 {

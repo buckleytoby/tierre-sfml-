@@ -18,6 +18,7 @@ enum class ActionTypes {
     MoveTowardsGoal,
     TransferInventory,
     SETGOALTOBUILDING,
+    end
 };
 // define functions for each action type
 typedef std::function<void()> DefaultActionFcn;
@@ -38,13 +39,14 @@ class Action
         std::string name_;
         std::vector<int> universal_ids_; // integers used to identify action-specific objects in game
 
+        Action(){};
+        Action(ActionTypes action_type){action_type_ = action_type;}
         virtual void update(double dt);
         virtual bool IsComplete(){return success_callback_();}
         void SetUpdateCallback(DefaultActionFcn update_callback){update_callback_ = update_callback;}
         void SetSuccessCallback(SuccessFcn success_callback){success_callback_ = success_callback;}
 
-        const std::string to_string();
-        virtual std::string GetName(){return to_string();}
+        virtual std::string GetName(){return to_string(action_type_);}
 };
 typedef std::shared_ptr<Action> ActionPtr;
 

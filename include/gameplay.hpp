@@ -12,18 +12,10 @@
 #include "gui.hpp"
 #include "viewport.hpp"
 
-const std::string to_full_name(ResourceTypes p);
-const std::string to_string(ResourceTypes p);
-const sf::Color to_color(ResourceTypes p);
 const std::string to_string(ItemTypes p);
 const std::string to_string(WorkerStates p);
 const std::string to_full_string(WorkerStates p);
 const std::string to_string(NeedsTypes p);
-const std::string to_string(BuildingTypes p);
-const std::string to_full_string(BuildingTypes p);
-const std::string to_full_string(BuildingStatus p);
-const std::string to_full_string(ItemTypes p);
-const std::string to_full_string(RecipeTypes p);
 
 
 

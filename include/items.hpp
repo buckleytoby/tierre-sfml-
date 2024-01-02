@@ -30,6 +30,8 @@ enum class ItemTypes {
     GRASS,
     CORN,
 };
+const std::string to_string(ItemTypes p);
+const std::string to_full_string(ItemTypes p);
 
 // define mapping from ResourceTypes to ItemTypes
 extern std::map<ResourceTypes, ItemTypes> RESOURCE_TO_ITEM_MAP;

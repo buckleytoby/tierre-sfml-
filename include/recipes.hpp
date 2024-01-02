@@ -50,6 +50,8 @@ enum class RecipeTypes {
 
 };
 
+const std::string to_full_string(RecipeTypes p);
+
 class Recipe {
     public:
         std::map<ItemTypes, double> inputs_; // ItemTypes -> amount needed

@@ -2,7 +2,7 @@
 
 Button::Button(double x, double y, std::string str): Widget(x, y)
 {
-    auto textbox = std::make_shared<TextBox>(border_height_, border_height_, str);
+    auto textbox = std::make_shared<TextBox>(0, 0, str);
     textbox->CalculateBounds();
     AddChild(textbox);
     CalculateBounds();
@@ -25,9 +25,9 @@ void Button::onDraw(sf::RenderTarget& target, const sf::Transform& transform) co
 }
 sf::Rect<double> Button::onCalculateBounds() {
     // w.r.t. parent
-    bounds_.left = GetParentX();
-    bounds_.top = GetParentY();
+    bounds_.left = GetParentX() - border_height_;
+    bounds_.top = GetParentY() - border_height_;
     bounds_.width = children_[0]->bounds_.width + 2 * border_height_;
-    bounds_.height = shape_.getLocalBounds().height;
+    bounds_.height = shape_.getLocalBounds().height + 2 * border_height_;
     return bounds_;
 }
