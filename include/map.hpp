@@ -10,6 +10,7 @@
 enum class MapInputs
 {
     NONE,
+    HANDLED,
 };  
 enum class MapActions
 {

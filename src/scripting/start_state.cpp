@@ -74,7 +74,7 @@ GamePlay::GamePlay(){
     hud_.AddWidget(esc);
 
     // selected unit status
-    auto selected = std::make_shared<SelectedStatus>(300, 200, 300, 600, hud_.map_ref_, task_manager_ptr_);
+    auto selected = std::make_shared<SelectedStatus>(300, 200, 300, 900, hud_.map_ref_, task_manager_ptr_);
     hud_.AddWidget(selected);
 
     //// TASK MANAGER GUI
@@ -84,11 +84,12 @@ GamePlay::GamePlay(){
     hud_.AddWidget(task_mgr_widget);
 
     // task mgr open button
-    auto task_mgr_open_button = std::make_shared<Button>(50, 50, "Task Manager");
+    auto task_mgr_open_button = std::make_shared<Button>(50, 800, "Task Manager");
     task_mgr_open_button->SetOnClickCallback([task_mgr_widget](){
         task_mgr_widget->ToggleVisibility();
     });
     hud_.AddWidget(task_mgr_open_button);
+
     //// end task manager GUI
 
 

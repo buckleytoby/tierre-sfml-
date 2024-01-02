@@ -13,8 +13,11 @@ void Dropdown::AddItem(std::string str){
     // button callback
     auto button_cb = [this](){
         // set clicked idx
+        // TODO: change this to be id based
+        clicked_idx_ = GetHoveredChild();
+        // click me too. Can remove this if I choose to change the click behavior to click the parent object too
         clicked_ = true;
-
+        onClick();
     };
     // x, y is w.r.t. parent
     auto button = std::make_shared<Button>(0, bounds_.height + 10, str);
@@ -22,10 +25,10 @@ void Dropdown::AddItem(std::string str){
     AddChild(button);
     CalculateBounds();
 }
-int Dropdown::GetHighlightedChild(){
-    // iterate through children, return early if it's highlighted
+int Dropdown::GetHoveredChild(){
+    // iterate through children, return early if it's hovered
     for (int i=0; i<children_.size(); i++){
-        if (children_[i]->highlighted_){
+        if (children_[i]->hovered_){
             return i;
         }
     }
@@ -33,12 +36,13 @@ int Dropdown::GetHighlightedChild(){
 }
 int Dropdown::GetClickedIdx(){
     // iterate through children, return early if it's clicked
-    for (int i=0; i<children_.size(); i++){
-        if (children_[i]->clicked_){
-            return i;
-        }
-    }
-    return -1;
+    // for (int i=0; i<children_.size(); i++){
+    //     if (children_[i]->clicked_){
+    //         return i;
+    //     }
+    // }
+    // return -1;
+    return clicked_idx_;
 }
 void Dropdown::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
 

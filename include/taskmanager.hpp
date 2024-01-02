@@ -34,19 +34,18 @@ class Action
 {
     public:
         ActionTypes action_type_{ActionTypes::Default};
-        DefaultActionFcn update_callback_;
-        SuccessFcn success_callback_;
         std::string name_;
         std::vector<int> universal_ids_; // integers used to identify action-specific objects in game
+        bool completed_{false};
 
         Action(){};
         Action(ActionTypes action_type){action_type_ = action_type;}
-        virtual void update(double dt);
-        virtual bool IsComplete(){return success_callback_();}
-        void SetUpdateCallback(DefaultActionFcn update_callback){update_callback_ = update_callback;}
-        void SetSuccessCallback(SuccessFcn success_callback){success_callback_ = success_callback;}
 
+        // virtuals
         virtual std::string GetName(){return to_string(action_type_);}
+        virtual ActionTypes GetActiveActionType(){return action_type_;}
+        virtual void update(bool is_complete);
+        virtual bool IsComplete(){return completed_;}
 };
 typedef std::shared_ptr<Action> ActionPtr;
 
@@ -55,7 +54,7 @@ class SetGoalToBuilding: public Action
     public:
 
         SetGoalToBuilding(int building_id);
-        virtual void update(double dt);
+        virtual void update(bool is_complete);
 };
 
 // inherit from action so that tasks themselves can be added to actions_
@@ -63,21 +62,25 @@ class Task : public Action
 {
     public:
         std::vector<ActionPtr> actions_;
-        int active_action_{0};
+        int active_action_nb_{0};
         int prior_action_{0};
 
         Task(std::string name){name_ = name;}
 
-        virtual void update(double dt);
-        virtual bool IsComplete();
         void IncrementActiveAction();
         void AddAction(ActionPtr action){actions_.push_back(action);}
         void RemoveAction(){actions_.pop_back();}
         void NewAndAddAction(ActionTypes type);
-        void Reset(){active_action_ = 0;}
+        void Reset(){active_action_nb_ = 0;}
         void Clear(){actions_.clear(); Reset();}
         std::vector<std::string> GetActionNames();
+        std::shared_ptr<Task> copy();
+
+        // virtuals
         virtual std::string GetName(){return name_;}
+        virtual ActionTypes GetActiveActionType();
+        virtual void update(bool is_complete);
+        virtual bool IsComplete();
 };
 typedef std::shared_ptr<Task> TaskPtr;
 
@@ -96,7 +99,7 @@ class TaskManager
         void EditTask(int idx);
 
         // getters
-        TaskPtr GetTask(int idx){return tasks_[idx];}
+        TaskPtr GetTask(int idx);
 
         TaskManager(){}
         std::vector<std::string> GetTaskNames();

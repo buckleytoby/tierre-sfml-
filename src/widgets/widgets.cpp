@@ -29,21 +29,23 @@ void Widget::Update(double dt, double x, double y){
     // inputs: x, y are the mouse position w.r.t. the parent
     // update the widget
     if(bounds_.contains(x, y)){
-        if (!highlighted_){
-            highlighted_ = true;
-            std::cout << GetID() << " highlighted." << std::endl;
+        if (!hovered_){
+            hovered_ = true;
+            onHover();
         }
     } else {
-        if (highlighted_){
-            highlighted_ = false;
+        if (hovered_){
+            hovered_ = false;
+            onLeaveHover();
         }
     }
 
+    // call the self update
+    onUpdate(dt, x, y);
+
     // update the children
     for (auto& child: children_){
-        if (child != nullptr){
             child->Update(dt, x - bounds_.left, y - bounds_.top);
-        }
     }
 }
 void Widget::draw(sf::RenderTarget& target, const sf::Transform& parentTransform) const {
@@ -60,9 +62,7 @@ void Widget::draw(sf::RenderTarget& target, const sf::Transform& parentTransform
 
     // draw its children
     for (auto& child: children_){
-        if (child != nullptr){
             child->draw(target, combinedTransform);
-        }
     }
 }
 
@@ -128,22 +128,24 @@ double Widget::GetParentY(){
 }
 WidgetInputs Widget::HandleInput(sf::Event& event){
     // handle the input
-    // only interact if the widget is visible, highlighted, and  left-clicked
+    // only interact if the widget is visible, hovered, and  left-clicked
     // return HANDLED if the input is handled, NONE otherwise
     if (visible_){
         if(wasLeftClicked(event)){
-            if (highlighted_){
-                clicked_ = true;
-
-                // since children are drawn on top of the parent, iterate through children first and give them precedence, handle the input
-                for (auto& child: children_){
-                    auto input = child->HandleInput(event);
-                    if (input == WidgetInputs::HANDLED){
-                        return WidgetInputs::HANDLED;
-                    }
+            // reset the clicked_ status. Clicked_ depends on children. If a child is clicked, the parent is NOT clicked.
+            clicked_ = false;
+            // since children are drawn on top of the parent, iterate through children first and give them precedence, handle the input
+            // doesn't require the parent to be hovered upon
+            for (auto& child: children_){
+                auto input = child->HandleInput(event); // recursion
+                if (input == WidgetInputs::HANDLED){
+                    return WidgetInputs::HANDLED;
                 }
+            }
 
-                // if no children handle the click, execute this widget's onClick and return handled
+            // if no children handle the click, execute this widget's onClick and return handled
+            if (hovered_){
+                clicked_ = true;
                 if (onClick()){
                     return WidgetInputs::HANDLED;
                 } else {
@@ -152,10 +154,8 @@ WidgetInputs Widget::HandleInput(sf::Event& event){
             }
         }
     } else {
-        clicked_ = false;
         return WidgetInputs::NONE;
     }
-
     return WidgetInputs::NONE;
 }
 bool Widget::onClick(){
@@ -167,5 +167,33 @@ bool Widget::onClick(){
     } else {
         onClick_cb_(); // TODO: force the onClick_cb_ to return a bool for success
         return true;
+    }
+}
+bool Widget::onHover(){
+    // debug
+    std::cout << GetID() << " hovered." << std::endl;
+    // call the callback
+    if (onHover_cb_ == nullptr){
+        return false;
+    } else {
+        onHover_cb_(); // TODO: force the onHover_cb_ to return a bool for success
+        return true;
+    }
+}
+bool Widget::onLeaveHover(){
+    // debug
+    std::cout << GetID() << " left hovered." << std::endl;
+    // call the callback
+    if (onLeaveHover_cb_ == nullptr){
+        return false;
+    } else {
+        onLeaveHover_cb_(); // TODO: force the onLeaveHover_cb_ to return a bool for success
+        return true;
+    }
+}
+void Widget::AddChild(std::shared_ptr<Widget> child){
+    if (child != nullptr){
+        // add a child to the widget
+        children_.push_back(child);
     }
 }

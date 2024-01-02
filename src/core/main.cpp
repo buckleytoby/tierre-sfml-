@@ -13,13 +13,15 @@ std::map<ResourceTypes, ItemTypes> RESOURCE_TO_ITEM_MAP;
 int FRAMERATE = 30;
 double DELTATIME = 1.0 / (double) FRAMERATE; // tie physics to framerate
 int PIXELS_PER_METER = 100;
+unsigned int SCREENWIDTH = 1900;
+unsigned int SCREENHEIGHT = 900;
 
 /*
 Create the main gamescreen and run the game loop.
 */
 int main()
 {
-    auto window = sf::RenderWindow{ { 1440, 720}, "Tierre"};
+    auto window = sf::RenderWindow{ {SCREENWIDTH, SCREENHEIGHT}, "Tierre"};
     window.setFramerateLimit(FRAMERATE);
     window.setVerticalSyncEnabled(true); // call it once, after creating the gamescreen
 

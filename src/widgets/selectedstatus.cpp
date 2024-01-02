@@ -14,7 +14,7 @@ SelectedStatus::SelectedStatus(double x, double y, double w, double h, MapPtr ma
 
 
 }
-void SelectedStatus::Update(double dt, double x, double y){
+void SelectedStatus::onUpdate(double dt, double x, double y){
     // check if selected unit changed. If so, trigger a redraw
     auto unit = map_ref_->GetFirstSelectedObject();
     if (unit != selected_unit_ptr_){
@@ -54,7 +54,7 @@ void SelectedStatus::Update(double dt, double x, double y){
                 if (worker->task_ptr_ != nullptr){
                     str += "\nExecuting Task Progress: \n";
                     for (int i=0; i<worker->task_ptr_->actions_.size(); i++){
-                        if (i == worker->task_ptr_->active_action_){
+                        if (i == worker->task_ptr_->active_action_nb_){
                             str += ">> ";
                         }
                         str += worker->task_ptr_->actions_[i]->GetName() + "\n";
@@ -165,16 +165,19 @@ void SelectedStatus::reDraw(){
             if (worker->task_ptr_ != nullptr){
                 task_str = worker->task_ptr_->GetName();
             }
-            button_active_task_ = std::make_shared<Button>(600, 50, "Active Task: \n" + task_str);
-            button_active_task_->SetOnClickCallback([this](){
-                tasks_list_->ToggleVisibility();
-            });
 
             // active tasks list
             tasks_list_ = std::make_shared<Dropdown>(200, 600, task_manager_ptr_->GetTaskNames());
             tasks_list_->SetOnClickCallback([this, worker](){
                 // cb: set this worker's task to the selected idx from the dropdown menu
                 worker->SetTask(task_manager_ptr_->GetTask(tasks_list_->GetClickedIdx()));
+                reDraw();
+            });
+            tasks_list_->MakeInvisible();
+            
+            button_active_task_ = std::make_shared<Button>(50, 600, "Active Task: \n" + task_str);
+            button_active_task_->SetOnClickCallback([this](){
+                tasks_list_->ToggleVisibility();
             });
 
         }

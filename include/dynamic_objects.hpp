@@ -188,11 +188,12 @@ class Worker : public DynamicObject
 
         // Action primitive map
         // reference: https://stackoverflow.com/questions/3113139/how-to-create-mapstring-classmethod-in-c-and-be-able-to-search-for-functi
-        std::map<std::string, std::function<void()>> action_primitive_map_{
-            {"SelectClosestBuilding", std::bind(&Worker::SelectClosestBuilding, this)},
-            {"SetGoalToSelectedBuilding", std::bind(&Worker::SetGoalToSelectedBuilding, this)},
-            {"MoveTowardsGoal", std::bind(&Worker::MoveTowardsGoal, this)},
-            {"TransferInventory", std::bind(&Worker::TransferInventory, this)},
+        std::map<ActionTypes, std::function<void()>> action_primitive_map_
+        {
+            {ActionTypes::SelectClosestBuilding, std::bind(&Worker::SelectClosestBuilding, this)},
+            {ActionTypes::SetGoalToSelectedBuilding, std::bind(&Worker::SetGoalToSelectedBuilding, this)},
+            {ActionTypes::MoveTowardsGoal, std::bind(&Worker::MoveTowardsGoal, this)},
+            {ActionTypes::TransferInventory, std::bind(&Worker::TransferInventory, this)},
         };
         TaskPtr task_ptr_{nullptr};
         void SetTask(TaskPtr ptr){task_ptr_ = ptr;}

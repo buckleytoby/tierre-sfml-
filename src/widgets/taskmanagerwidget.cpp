@@ -51,10 +51,12 @@ void TaskManagerWidget::reDraw(){
             // then get action type from that
             (ActionTypes)list_of_actions->GetClickedIdx()
         );
+        reDraw();
     });
     remove_action = MakeButton(800, 0, "Remove Action");
     remove_action->SetOnClickCallback([this](){
         task_manager_ptr_->active_task_->RemoveAction();
+        reDraw();
     });
 
     // add all widgets

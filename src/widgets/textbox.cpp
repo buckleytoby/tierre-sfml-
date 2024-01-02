@@ -8,29 +8,27 @@ TextBox::TextBox(double x, double y, std::string str): Widget(x, y)
     if (!font_.loadFromFile("c:\\Windows\\Fonts\\arial.ttf")){
         return;
     }
-    text_width_ = text_str_.size() * char_width_;
+    // make text
+    text_.setFont(font_);
+    text_.setCharacterSize(char_height_);
+    text_.setString(text_str_);
+    CalculateBounds();
+}
+TextBox::TextBox(double x, double y, std::string str, double border_thickness): TextBox(x, y, str)
+{
+    border_thickness_ = border_thickness;
+    text_.setOutlineThickness(border_thickness_);
     CalculateBounds();
 }
 
 void TextBox::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
-    // make text
-    sf::Text text;
-    text.setFont(font_);
-    text.setCharacterSize(char_height_);
-    text.setString(text_str_);
-    if (highlighted_){
-        text.setFillColor(sf::Color::Black);
-    } else {
-        text.setFillColor(sf::Color::White);
-    }
-
-    target.draw(text, transform);
+    target.draw(text_, transform);
 }
 sf::Rect<double> TextBox::onCalculateBounds() {
     // w.r.t. parent
     bounds_.left = GetParentX();
     bounds_.top = GetParentY();
-    bounds_.width = text_width_;
-    bounds_.height = char_height_;
+    bounds_.width = text_.getGlobalBounds().width;
+    bounds_.height = text_.getGlobalBounds().height;
     return bounds_;
 }

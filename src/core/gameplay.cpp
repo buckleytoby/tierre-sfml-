@@ -24,55 +24,6 @@ void GamePlay::update(double dt){
     // update the viewport
     viewport_.update(dt);
 }
-GameScreenInputs GamePlay::HandleInput(sf::Event& event){
-    // the idea is to have the actions resultant from the sf::Event& event be context dependent, as in, depending on what the user has currently selected, and what keystrokes they make, the action that results is different.
-    // this allows each class member to implement its own HandleInput function which updates its own actions, and then in the update step, it'll actually execute those actions
-
-    // gameplay level actions, these are independent of what's going on in the game
-    GameScreenInputs output = GameScreenInputs::NONE;
-
-    switch (event.type){
-        case sf::Event::KeyReleased:
-            switch (event.key.scancode){
-                case sf::Keyboard::Scan::Escape:
-                    std::cout << "Change active gamescreen TitleScreen" << std::endl;
-                    return GameScreenInputs::CHANGEACTIVEGAMESCREENTITLESCREEN;
-            }
-    }
-
-    // update mouse position
-    viewport_.UpdateMousePosition();
-    map_.SetMousePosition(viewport_.map_mouse_x_, viewport_.map_mouse_y_);
-    hud_.SetMousePosition(viewport_.mouse_x_, viewport_.mouse_y_);
-
-    // viewport takes next precedence
-    auto viewportinputs = viewport_.HandleInput(event);
-    switch (viewportinputs){
-        case ViewportInputs::NONE:
-            break;
-        case ViewportInputs::HANDLED:
-            return GameScreenInputs::NONE;
-            break;
-    }
-    
-    // HUD takes next precedence
-    auto hudinputs = hud_.HandleInput(event);
-    switch (hudinputs){
-        case GUIInputs::NONE:
-            break;
-        case GUIInputs::HANDLED:
-            return GameScreenInputs::HANDLED;
-            break;
-    }
-
-    // Map takes next precedence
-    map_.HandleInput(event);
-
-
-    // not handled by this or any children of this component
-    return output;
-
-}
 void GamePlay::load(sf::RenderWindow& window){
     // load the gameplay
     // set the viewport window reference
@@ -614,6 +565,7 @@ void Worker::AI(double dt){
             break;
         case WorkerStates::IDLE:
             // Attempt to infer an action based on the attention
+            ResetDynamicObjectActions();
             InferAction(dt);
             break;
         case WorkerStates::EXECUTINGTASK:
@@ -932,7 +884,28 @@ void Worker::InferAction(double dt){
 }
 void Worker::ExecuteTask(double dt){
     // Execute a task
-    task_ptr_->update(dt);
+    // TODO: move this to dynamic object class
+    if (task_ptr_ == nullptr){
+        std::cout << "No active task." << std::endl;
+        SetState(WorkerStates::IDLE);
+        return;
+    }
+    
+    ResetDynamicObjectActions();
+            
+    auto action_type = task_ptr_->GetActiveActionType(); // recurse get active action type
+    action_primitive_map_[action_type]();
+
+    SuccessFcn success_fcn = [this](){
+            if (CheckState(WorkerStates::IDLE)){
+                return true;
+            } else {
+                return false;
+            }
+        };
+
+    auto is_complete = success_fcn();
+    task_ptr_->update(is_complete); // recurse update off completion of action
 
     // Revert to executing task. Bit of a hack.
     SetState(WorkerStates::EXECUTINGTASK);
@@ -957,28 +930,8 @@ void Worker::MakeTask1(){
     
     TaskPtr task = std::make_shared<Task>("Example Task Worker");
     for (int i=0; i<task_actions_.size(); i++){
-            
-        auto update_fcn = [this, task_actions_, task_start_states, i](){
-            // reset low-level actions
-            ResetDynamicObjectActions();
-            auto start_state = task_start_states[i];
-            SetState(start_state);
-            action_primitive_map_[task_actions_[i]]();
-        };
-
-        // define success callback
-        SuccessFcn success_fcn = [this](){
-            if (CheckState(WorkerStates::IDLE)){
-                return true;
-            } else {
-                return false;
-            }
-        };
-
-        ActionPtr action1 = std::make_shared<Action>();
-        action1->SetUpdateCallback(update_fcn);
-        action1->SetSuccessCallback(success_fcn);
-        task->AddAction(action1);
+        ActionPtr action = std::make_shared<Action>();
+        task->AddAction(action);
     }
 }
 /////////////////////////////////////// End Worker ///////////////////////////////////////

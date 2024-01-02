@@ -18,14 +18,13 @@ const std::string to_string(ActionTypes action_type_){
     }
 }
 ////////////////////////////// Action //////////////////////////////
-void Action::update(double dt){
-    // call the callback
-    update_callback_();
+void Action::update(bool is_complete){
+    completed_ = is_complete;
 }
 SetGoalToBuilding::SetGoalToBuilding(int building_id){
     universal_ids_.push_back(building_id);
 }
-void SetGoalToBuilding::update(double dt){
+void SetGoalToBuilding::update(bool is_complete){
     // get building ptr from id
     // auto building_ptr = GetBuildingPtrFromId(universal_ids_[0]);
     // // set goal to building center
@@ -33,26 +32,31 @@ void SetGoalToBuilding::update(double dt){
 }
 ////////////////////////////// End Action //////////////////////////////
 ////////////////////////////// Task //////////////////////////////
-void Task::update(double dt){
+void Task::update(bool is_complete){
     // update the active action, recursion if action is a task
-    actions_[active_action_]->update(dt);
+    actions_[active_action_nb_]->update(is_complete);
     // test success criteria
-    if(actions_[active_action_]->IsComplete()){
+    if(actions_[active_action_nb_]->IsComplete()){
         IncrementActiveAction();
     }
 }
 bool Task::IsComplete(){
-    // Method called in the update recursion.
-
-    if (active_action_ == 0 && active_action_ != prior_action_){
-        return true;
-    } else {
-        return false;
+    // no actions -> complete
+    // all actions complete -> complete
+    // else, not complete
+    bool complete = true;
+    for (auto action: actions_){
+        complete = complete && action->IsComplete();
     }
+    return complete;
+}
+ActionTypes Task::GetActiveActionType(){
+    // recurse
+    return actions_[active_action_nb_]->GetActiveActionType();
 }
 void Task::IncrementActiveAction(){
-    prior_action_ = active_action_;
-    active_action_ = (active_action_ + 1) % actions_.size();
+    prior_action_ = active_action_nb_;
+    active_action_nb_ = (active_action_nb_ + 1) % actions_.size();
 }
 std::vector<std::string> Task::GetActionNames(){
     std::vector<std::string> action_names;
@@ -64,6 +68,13 @@ std::vector<std::string> Task::GetActionNames(){
 void Task::NewAndAddAction(ActionTypes type){
     auto action = std::make_shared<Action>(type);
     AddAction(action);
+}
+TaskPtr Task::copy(){
+    TaskPtr task_ptr = std::make_shared<Task>(name_);
+    for (auto action: actions_){
+        task_ptr->AddAction(action);
+    }
+    return task_ptr;
 }
 ////////////////////////////// End Task //////////////////////////////
 ////////////////////////////// TaskManager //////////////////////////////
@@ -113,5 +124,12 @@ std::vector<std::string> TaskManager::GetActionsAndTasks(){
         out.push_back(taskptr->GetName());
     }
     return out;
+}
+TaskPtr TaskManager::GetTask(int idx){
+    // value protection
+    if (idx < 0 || idx >= tasks_.size()){
+        return nullptr;
+    }
+    return tasks_[idx]->copy();
 }
 ////////////////////////////// End TaskManager //////////////////////////////

@@ -28,7 +28,7 @@ enum class WidgetInputs{
 class Widget
 {
 public:
-    bool highlighted_{false};
+    bool hovered_{false};
     bool clicked_{false};
     bool visible_{true};
     sf::Rect<double> bounds_{0, 0, 0, 0}; // left & top should be same as the transform_ origin
@@ -37,9 +37,13 @@ public:
 
     // callback pointer holders
     std::function<void()> onClick_cb_{nullptr};
+    std::function<void()> onHover_cb_{nullptr};
+    std::function<void()> onLeaveHover_cb_{nullptr};
 
     // callback setters
     void SetOnClickCallback(std::function<void()> cb){onClick_cb_ = cb;}
+    void SetOnHoverCallback(std::function<void()> cb){onHover_cb_ = cb;}
+    void SetOnLeaveHoverCallback(std::function<void()> cb){onLeaveHover_cb_ = cb;}
 
     // core functions
     Widget(double x, double y);
@@ -49,19 +53,25 @@ public:
     void Finalize();
     double GetParentX();
     double GetParentY();
-    void AddChild(std::shared_ptr<Widget> child){children_.push_back(child);}
-    WidgetInputs HandleInput(sf::Event& event);
+    void AddChild(std::shared_ptr<Widget> child);
+    WidgetInputs HandleInput(sf::Event& event); // discrete events
+    void Update(double dt, double x, double y); // continuous events
     void MakeVisible(){visible_ = true;}
     void MakeInvisible(){visible_ = false;}
     void ToggleVisibility(){visible_ = !visible_;}
     
     // virtuals
     virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {}
+    virtual void reDraw(){}
     virtual sf::Rect<double> onCalculateBounds() {return bounds_;}
-    virtual void Update(double dt, double x, double y);
+    virtual void onUpdate(double dt, double x, double y){}
     virtual WidgetInputs onHandleInput(sf::Event& event){return WidgetInputs::NONE;}
-    virtual bool onClick();
     virtual std::string GetID(){return "Widget";}
+
+    // user interactions
+    virtual bool onClick();
+    virtual bool onHover();
+    virtual bool onLeaveHover();
 
 }; 
 typedef std::shared_ptr<Widget> WidgetPtr;
@@ -90,15 +100,15 @@ class TextBox: public Widget
         std::string text_str_;
         sf::Font font_;
         double char_height_{15}; // pixels
-        double char_width_{15}; // 0.6 & char height
-        double text_width_{0};
+        double border_thickness_{0};
 
         TextBox(double x, double y, std::string str);
-        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+        TextBox(double x, double y, std::string str, double border_thickness);
 
         // virtuals
         virtual sf::Rect<double> onCalculateBounds();
         virtual std::string GetID(){return "TextBox";}
+        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
 };
 typedef std::shared_ptr<TextBox> TextBoxPtr;
 
@@ -120,8 +130,9 @@ class Button: public Widget
 {
     public:
         sf::RectangleShape shape_;
+        TextBoxPtr textbox_;
         double border_height_{5}; // pixels
-        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+
 
         Button(double x, double y, std::string str);
         virtual sf::Rect<double> onCalculateBounds();
@@ -133,9 +144,11 @@ ButtonPtr MakeButton(double x, double y, std::string str);
 class Dropdown: public Widget
 {
     public:
+        int clicked_idx_{-1};
+
         Dropdown(double x, double y, std::vector<std::string> strs);
         void AddItem(std::string str);
-        int GetHighlightedChild();
+        int GetHoveredChild();
         int GetClickedIdx();
         virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
         virtual WidgetInputs HandleInput(sf::Event& event);
@@ -183,9 +196,10 @@ class SelectedStatus: public Widget
         SelectedStatus(double x, double y, double w, double h, MapPtr map_ref, TaskManagerPtr task_manager_ptr);
 
         // virtuals
-        virtual void Update(double dt, double x, double y);
+        virtual void onUpdate(double dt, double x, double y);
         virtual void reDraw();
         virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
+        virtual std::string GetID(){return "SelectedStatus";}
 };
 
 #endif // WIDGETS_HPP
