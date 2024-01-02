@@ -17,7 +17,7 @@ enum class ItemCategories {
 // note: if an item is category NONE, then we don't have to make an explicit class for it, it'll just use the default Item class.
 enum class ItemTypes {
     NONE,
-    CORNSTALK,
+    CORN,
     CORNSEED,
     PLANTFIBER,
     PLANTROPE,
@@ -28,7 +28,7 @@ enum class ItemTypes {
     STONE,
     WATER,
     GRASS,
-    CORN,
+    CORNSTALK,
 };
 const std::string to_string(ItemTypes p);
 const std::string to_full_string(ItemTypes p);

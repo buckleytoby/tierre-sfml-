@@ -130,7 +130,7 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                     break;
                 case BuildingStatus::READY:
                     str += "\n Recipe " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_) + " Reqs: ";
-                    for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->recipes_[map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_].inputs_){
+                    for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->GetRecipe(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_)->inputs_){
                         str += to_full_string(item.first);
                         str += ": ";
                         str += std::to_string(item.second);
@@ -139,7 +139,7 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                     break;
                 case BuildingStatus::OPERATING:
                     str += "\n Recipe Progress: " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->effort_val_);
-                    str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->recipes_[map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_].effort_req_);
+                    str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->GetRecipe(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_)->effort_req_);
                     break;
             }
 
@@ -154,7 +154,7 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
     AddChild(button_active_task_);
     AddChild(tasks_list_);
 }
-void SelectedStatus::reDraw(){    
+void SelectedStatus::reDraw(){
     // redraw widgets that require persistence but also sometimes change
     if (selected_unit_ptr_ != nullptr){
         if (selected_unit_ptr_->dynamic_object_type_ == DynamicObjectTypes::WORKER){
@@ -182,13 +182,31 @@ void SelectedStatus::reDraw(){
 
         }
     }
+
+    // tile GUI
+    if (map_ref_->selected_tile_ptr_ != nullptr){
+        if (map_ref_->selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
+            // make building widget
+            building_widget_ = std::make_shared<BuildingWidget>(200, 200, 400, 400, map_ref_->selected_tile_ptr_->building_ptr_);
+            AddChild(building_widget_);
+            building_widget_->MakeInvisible();
+
+            // make building widget visibility button
+            auto building_widget_button = std::make_shared<Button>(50, 400, "Building Widget");
+            building_widget_button->SetOnClickCallback([this](){
+                building_widget_->ToggleVisibility();
+            });
+
+        }
+    }
+
     // add children here?
 }
 
-void SelectedStatus::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
-    // reset children
-    // children_.clear();
-    // AddChild(border_);
-    // AddChild(text_);
-    // AddChild(button_active_task_);
-}
+// void SelectedStatus::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
+//     // reset children
+//     // children_.clear();
+//     // AddChild(border_);
+//     // AddChild(text_);
+//     // AddChild(button_active_task_);
+// }

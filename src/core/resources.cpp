@@ -8,7 +8,7 @@ const std::string to_string(ResourceTypes p){
     case ResourceTypes::STONE: return "S";
     case ResourceTypes::WATER: return "W";
     case ResourceTypes::GRASS: return "G";
-    case ResourceTypes::CORN: return "C";
+    case ResourceTypes::CORNSTALK: return "C";
 
   }
   return ""; // or an empty string
@@ -20,7 +20,7 @@ const std::string to_full_string(ResourceTypes p){
     case ResourceTypes::STONE: return "Stone";
     case ResourceTypes::WATER: return "Water";
     case ResourceTypes::GRASS: return "Grass";
-    case ResourceTypes::CORN: return "Corn";
+    case ResourceTypes::CORNSTALK: return "Cornstalk";
 
   }
   return ""; // or an empty string

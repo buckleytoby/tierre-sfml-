@@ -10,6 +10,7 @@
 std::map<ResourceTypes, ItemTypes> RESOURCE_TO_ITEM_MAP;
 
 // initialize globals
+bool DEBUG = true;
 int FRAMERATE = 30;
 double DELTATIME = 1.0 / (double) FRAMERATE; // tie physics to framerate
 int PIXELS_PER_METER = 100;

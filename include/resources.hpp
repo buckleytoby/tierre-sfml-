@@ -12,7 +12,7 @@ enum class ResourceTypes {
     STONE,
     WATER,
     GRASS,
-    CORN,
+    CORNSTALK,
 };
 const std::string to_string(ResourceTypes p);
 const std::string to_full_string(ResourceTypes p);
@@ -56,10 +56,10 @@ class Stone : public Resource
         Stone(double total){resource_type_ = ResourceTypes::STONE; time_to_gather_ = 2.0; yield_per_gather_ = 1.0; total_ = total;}
 };
 
-class CornResource : public Resource
+class CornstalkResource : public Resource
 {
     public:
-        CornResource(double total){resource_type_ = ResourceTypes::CORN; time_to_gather_ = 1.0; yield_per_gather_ = 1.0; total_ = total;}
+        CornstalkResource(double total){resource_type_ = ResourceTypes::CORNSTALK; time_to_gather_ = 1.0; yield_per_gather_ = 1.0; total_ = total;}
 };
 
 

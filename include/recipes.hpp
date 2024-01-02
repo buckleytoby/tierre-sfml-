@@ -56,8 +56,9 @@ class Recipe {
     public:
         std::map<ItemTypes, double> inputs_; // ItemTypes -> amount needed
         std::map<ItemTypes, double> outputs_; // ItemTypes -> amount produced
-        double effort_req_{10}; // effort "units"
+        double effort_req_{1.0}; // effort "units"
 };
+typedef std::shared_ptr<Recipe> RecipePtr;
 
 class ProcessCornstalk : public Recipe
 {
@@ -72,7 +73,7 @@ class ProcessCornstalk : public Recipe
         };
 
         ProcessCornstalk(){
-            effort_req_ = 2.0;
+            effort_req_ = DEBUG?1.0: 2.0;
         }
 };
 class MakePlantRope : public Recipe
@@ -102,7 +103,7 @@ class MakeWoodRaft : public Recipe
         };
 
         MakeWoodRaft(){
-            effort_req_ = 60.0;
+            effort_req_ = DEBUG? 1.0 : 60.0;
         }
 };
 
@@ -118,7 +119,7 @@ class FarmCorn : public Recipe
         };
 
         FarmCorn(){
-            effort_req_ = 10.0;
+            effort_req_ = DEBUG? 1.0: 10.0;
         }
 };
 

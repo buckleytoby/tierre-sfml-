@@ -34,13 +34,18 @@ class Building {
         std::map<ItemTypes, double> inventory_map_; // ItemType -> amount
         std::map<ItemTypes, double> item_reqs_map_; // ItemType -> required amount
         double effort_val_{0.0}; // effort "units"
-        double construction_effort_req_{10.0}; // effort "units"
+        double construction_effort_req_{1.0}; // effort "units"
         RecipeTypes active_recipe_{RecipeTypes::NONE}; // recipe currently being worked on
 
         bool CheckItemReqs();
         void update(double dt);
         void AddToInventory(ItemTypes itemType, double amount);
         BuildingStatus GetStatus(){return building_status_;}
+        RecipePtr GetRecipe(RecipeTypes recipe_type){return std::shared_ptr<Recipe>(&recipes_[recipe_type]);}
+        std::vector<std::string> GetRecipeNames();
+        void SetActiveRecipe(RecipeTypes recipe_type){active_recipe_ = recipe_type;}
+        void SetActiveRecipe(int idx);
+
 };
 typedef std::shared_ptr<Building> BuildingPtr;
 
@@ -55,7 +60,7 @@ class Workspace : public Building
             building_type_ = BuildingTypes::WORKSPACE;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
-            construction_effort_req_ = 3.0;
+            construction_effort_req_ = DEBUG? 1.0: 3.0;
             active_recipe_ = RecipeTypes::PROCESSCORNSTALK;
         }
 };
@@ -76,7 +81,7 @@ class Farm : public Building
             building_type_ = BuildingTypes::FARM;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
-            construction_effort_req_ = 30.0;
+            construction_effort_req_ = DEBUG? 1.0: 30.0;
             recipes_[RecipeTypes::FARMCORN] = FarmCorn();
             active_recipe_ = RecipeTypes::FARMCORN;
         }

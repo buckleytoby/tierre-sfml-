@@ -846,7 +846,7 @@ void Worker::TransferInventory(){
     // check if selected building has a recipe
     if (selected_building_ptr_->active_recipe_ != RecipeTypes::NONE){
         // iterate over inputs
-        for (auto& input : selected_building_ptr_->recipes_[selected_building_ptr_->active_recipe_].inputs_){
+        for (auto& input : selected_building_ptr_->GetRecipe(selected_building_ptr_->active_recipe_)->inputs_){
             // transfer item
             TransferItem(input.first, input.second, selected_building_ptr_);
         }
@@ -979,7 +979,7 @@ void Building::update(double dt){
         case BuildingStatus::READY:{
             // check if all items of the active recipe are fulfilled
             bool all_reqs_fulfilled = true;
-            for (auto& input: recipes_[active_recipe_].inputs_){
+            for (auto& input: GetRecipe(active_recipe_)->inputs_){
                 double reqd_amount = input.second;
                 // check if item in inventory
                 if (inventory_map_.find(input.first) != inventory_map_.end()){
@@ -993,7 +993,7 @@ void Building::update(double dt){
             }
             if (all_reqs_fulfilled){
                 // remove required items from inventory
-                for (auto& input : recipes_[active_recipe_].inputs_){
+                for (auto& input : GetRecipe(active_recipe_)->inputs_){
                     double reqd_amount = input.second;
                     // remove from inventory
                     AddToInventory(input.first, -reqd_amount);
@@ -1003,9 +1003,9 @@ void Building::update(double dt){
             }
             break;}
         case BuildingStatus::OPERATING:
-            if (effort_val_ > recipes_[active_recipe_].effort_req_){
+            if (effort_val_ > GetRecipe(active_recipe_)->effort_req_){
                 // add outputs to inventory
-                for (auto& output : recipes_[active_recipe_].outputs_){
+                for (auto& output : GetRecipe(active_recipe_)->outputs_){
                     // add to inventory
                     AddToInventory(output.first, output.second);
                 }

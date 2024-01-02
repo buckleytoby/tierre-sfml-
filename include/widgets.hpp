@@ -182,6 +182,23 @@ class TaskManagerWidget: public Widget
 };
 typedef std::shared_ptr<TaskManagerWidget> TaskManagerWidgetPtr;
 
+class BuildingWidget: public Widget
+{
+    public:
+        BuildingPtr building_ptr_;
+
+        RectWidgetPtr border_;
+        TextBoxPtr text_;
+
+        DropdownPtr recipes_list_;
+
+        BuildingWidget(double x, double y, double w, double h, BuildingPtr building_ptr);
+
+        // virtuals
+        virtual std::string GetID(){return "BuildingWidget";}
+};
+typedef std::shared_ptr<BuildingWidget> BuildingWidgetPtr;
+
 class SelectedStatus: public Widget
 {
     public:
@@ -192,13 +209,14 @@ class SelectedStatus: public Widget
         TextBoxPtr text_;
         ButtonPtr button_active_task_;
         DropdownPtr tasks_list_;
+        BuildingWidgetPtr building_widget_;
+        ButtonPtr button_building_widget_;
 
         SelectedStatus(double x, double y, double w, double h, MapPtr map_ref, TaskManagerPtr task_manager_ptr);
 
         // virtuals
         virtual void onUpdate(double dt, double x, double y);
         virtual void reDraw();
-        virtual void onDraw(sf::RenderTarget& target, const sf::Transform& transform) const;
         virtual std::string GetID(){return "SelectedStatus";}
 };
 

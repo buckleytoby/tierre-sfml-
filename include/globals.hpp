@@ -18,6 +18,7 @@ double eucl_dist(XY<T> xy1, XY<T> xy2){
 }
 
 // globals
+extern bool DEBUG;
 extern int FRAMERATE;
 extern double DELTATIME; // tie physics to framerate
 extern int PIXELS_PER_METER; // meters * PIXELS_PER_METER = pixels

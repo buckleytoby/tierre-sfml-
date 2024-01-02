@@ -23,12 +23,12 @@ GamePlay::GamePlay(){
     auto tile3 = std::make_shared<Tile>();
     auto lumber = std::make_shared<Lumber>(100.0); 
     auto stone = std::make_shared<Stone>(100.0);
-    auto corn = std::make_shared<CornResource>(100.0);
+    auto cornstalk = std::make_shared<CornstalkResource>(100.0);
     std::shared_ptr<Resource> resource1(lumber);
     std::shared_ptr<Resource> resource2(stone);
     tile->AddResource(resource1);
     tile2->AddResource(resource2);
-    tile3->AddResource(std::shared_ptr<Resource>(corn));
+    tile3->AddResource(std::shared_ptr<Resource>(cornstalk));
     map_.SetTile(4, 4, tile3);
 
     map_.SetTile(5, 5, tile);
