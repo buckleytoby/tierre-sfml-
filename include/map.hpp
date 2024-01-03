@@ -42,8 +42,8 @@ class Map {
         std::shared_ptr<Tile> GetTile(int x, int y);
         void update(double dt);
         MapInputs HandleInput(sf::Event& event);
-        std::map<ResourceTypes, std::shared_ptr<Resource>> GetResourceSlice(Rect<double> rect);
-        std::map<BuildingTypes, std::shared_ptr<Building>> GetBuildingSlice(Rect<double> rect);
+        std::vector<ResourcePtr> GetResourceSlice(Rect<double> rect);
+        std::vector<BuildingPtr> GetBuildingSlice(Rect<double> rect);
         void SelectObject(double x, double y);
         void SelectDynamicObject(double x, double y);
         void MakeBuilding(BuildingTypes building_type, double x, double y);

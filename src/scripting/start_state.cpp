@@ -59,9 +59,6 @@ GamePlay::GamePlay(){
     // give worker starting inventory of corn
     worker->AddToInventory(ItemTypes::CORN, 2);
 
-    // make a pre-built task
-    worker->MakeTask1();
-
     map_.dynamic_object_ptrs_.push_back(std::unique_ptr<DynamicObject>((DynamicObject*)worker));
 
     // Make the task manager

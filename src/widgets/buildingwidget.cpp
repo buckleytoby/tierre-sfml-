@@ -13,7 +13,7 @@ BuildingWidget::BuildingWidget(double x, double y, double w, double h, BuildingP
     AddChild(text_);
     
     // recipes list
-    recipes_list_ = std::make_shared<Dropdown>(200, 600, building_ptr_->GetRecipeNames());
+    recipes_list_ = std::make_shared<Dropdown>(50, 10, building_ptr_->GetRecipeNames());
     recipes_list_->SetOnClickCallback([this](){
         // cb: set this worker's task to the selected idx from the dropdown menu
         building_ptr_->SetActiveRecipe(

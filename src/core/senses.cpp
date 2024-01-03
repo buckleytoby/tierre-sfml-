@@ -1,10 +1,10 @@
 #include "senses.hpp"
 
 /////////////////////////////////////// Surroundings ///////////////////////////////////////
-void Surroundings::SetResource(std::map<ResourceTypes, std::shared_ptr<Resource>> resources){
+void Surroundings::SetResource(std::vector<ResourcePtr> resources){
     resources_ = resources;
 }
-void Surroundings::SetBuilding(std::map<BuildingTypes, std::shared_ptr<Building>> buildings){
+void Surroundings::SetBuilding(std::vector<BuildingPtr> buildings){
     buildings_ = buildings;
 }
 Rect<double> Surroundings::GetLocalRect(){

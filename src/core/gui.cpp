@@ -56,7 +56,7 @@ void GUI::Draw(sf::RenderWindow& window){
             // check for building
             if (tile->building_type_ != BuildingTypes::NONE){
                 str += to_string(tile->building_type_);
-                color = sf::Color::White;
+                color = to_color(tile->building_ptr_);
             } else {
                 // iterate through resources
                 for (auto& resource : map_ref_->GetTile(i, j)->resource_map_){

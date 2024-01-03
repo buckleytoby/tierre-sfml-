@@ -48,7 +48,8 @@ class DynamicObject
         DynamicObjectTypes dynamic_object_type_{DynamicObjectTypes::GENERIC};
 
         // params
-        double goal_dist_threshold_{0.25}; // in meters, euclidean distance
+        double goal_dist_threshold_{0.1}; // in meters, euclidean distance
+        double interaction_dist_{0.5}; // in meters, euclidean distance
         
 
         // virtual functions
@@ -75,6 +76,7 @@ enum class WorkerInputs
 enum class WorkerStates{
     DEAD,
     IDLE,
+    INFERRING,
     ACTIVE,
     EXECUTINGTASK,
     MOVING,
@@ -154,6 +156,8 @@ class Worker : public DynamicObject
         void update(double dt);
         WorkerInputs HandleInput(sf::Event& event);
         void AI(double dt);
+        void Reset();
+        void ClearAttention();
         void SetGoal(double x, double y);
         void SetState(WorkerStates worker_state);
         XY<double> GetCenter(){return XY<double>{footprint_.x_ + footprint_.width_ / 2.0, footprint_.y_ + footprint_.height_ / 2.0};}
@@ -181,6 +185,7 @@ class Worker : public DynamicObject
         void TakeItem(ItemTypes item_type, double amount_request, BuildingPtr building_ptr);
         DefaultActionFcn TakeInventory();
         DefaultActionFcn Eat();
+        void InferActionWide(double dt);
         void InferAction(double dt);
         void EngageWithBuilding(BuildingPtr building_ptr);
         // End Action Primitives
@@ -194,15 +199,12 @@ class Worker : public DynamicObject
             {ActionTypes::SetGoalToSelectedBuilding, std::bind(&Worker::SetGoalToSelectedBuilding, this)},
             {ActionTypes::MoveTowardsGoal, std::bind(&Worker::MoveTowardsGoal, this)},
             {ActionTypes::TransferInventory, std::bind(&Worker::TransferInventory, this)},
+            {ActionTypes::TakeInventory, std::bind(&Worker::TakeInventory, this)},
         };
         TaskPtr task_ptr_{nullptr};
         void SetTask(TaskPtr ptr){task_ptr_ = ptr;}
         void ExecuteTask(double dt);
 
-        // Pre-built test tasks
-        void MakeTask1();
-
-        void GatherAndStoreLumber(double dt);
 };
 
 #endif // DYNAMIC_OBJECTS_HPP

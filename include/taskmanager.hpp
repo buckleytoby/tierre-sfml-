@@ -17,7 +17,8 @@ enum class ActionTypes {
     SetGoalToSelectedBuilding,
     MoveTowardsGoal,
     TransferInventory,
-    SETGOALTOBUILDING,
+    SetGoalToBuilding,
+    TakeInventory,
     end
 };
 // define functions for each action type

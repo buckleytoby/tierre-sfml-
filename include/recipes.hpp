@@ -54,72 +54,90 @@ const std::string to_full_string(RecipeTypes p);
 
 class Recipe {
     public:
+        RecipeTypes type_;
         std::map<ItemTypes, double> inputs_; // ItemTypes -> amount needed
         std::map<ItemTypes, double> outputs_; // ItemTypes -> amount produced
         double effort_req_{1.0}; // effort "units"
+
+        Recipe(RecipeTypes type){type_ = type;}
+        void SetInputs(std::map<ItemTypes, double> inputs){inputs_ = inputs;}
+        void SetOutputs(std::map<ItemTypes, double> outputs){outputs_ = outputs;}
+        RecipeTypes GetType(){return type_;}
 };
 typedef std::shared_ptr<Recipe> RecipePtr;
 
 class ProcessCornstalk : public Recipe
 {
     public:
-        const static inline std::map<ItemTypes, double> inputs_{
+        std::map<ItemTypes, double> inputs_{
             {ItemTypes::CORNSTALK, 1}
         };
-        const static inline std::map<ItemTypes, double> outputs_{
+        std::map<ItemTypes, double> outputs_{
             {ItemTypes::CORN, 1},
             {ItemTypes::CORNSEED, 1},
             {ItemTypes::PLANTFIBER, 1}
         };
 
-        ProcessCornstalk(){
-            effort_req_ = DEBUG?1.0: 2.0;
+        ProcessCornstalk(): Recipe(RecipeTypes::PROCESSCORNSTALK)
+        {
+            effort_req_ = DEBUG? 1.0: 2.0;
+            SetInputs(inputs_);
+            SetOutputs(outputs_);
         }
 };
 class MakePlantRope : public Recipe
 {
     public:
-        const static inline std::map<ItemTypes, double> inputs_{
+        std::map<ItemTypes, double> inputs_{
             {ItemTypes::PLANTFIBER, 1}
         };
-        const static inline std::map<ItemTypes, double> outputs_{
+        std::map<ItemTypes, double> outputs_{
             {ItemTypes::PLANTROPE, 1}
         };
 
-        MakePlantRope(){
+        MakePlantRope(): Recipe(RecipeTypes::MAKEPLANTROPE)
+        {
             effort_req_ = 1.0;
+            SetInputs(inputs_);
+            SetOutputs(outputs_);
         }
 };
 
 class MakeWoodRaft : public Recipe
 {
     public:
-        const static inline std::map<ItemTypes, double> inputs_{
+        std::map<ItemTypes, double> inputs_{
             {ItemTypes::LUMBER, 10},
             {ItemTypes::PLANTROPE, 10}
         };
-        const static inline std::map<ItemTypes, double> outputs_{
+        std::map<ItemTypes, double> outputs_{
             {ItemTypes::WOODRAFT, 1}
         };
 
-        MakeWoodRaft(){
+        MakeWoodRaft(): Recipe(RecipeTypes::MAKEWOODRAFT)
+        {
             effort_req_ = DEBUG? 1.0 : 60.0;
+            SetInputs(inputs_);
+            SetOutputs(outputs_);
         }
 };
 
 class FarmCorn : public Recipe
 {
     public:
-        const static inline std::map<ItemTypes, double> inputs_{
+        std::map<ItemTypes, double> inputs_{
             {ItemTypes::WATER, 1},
             {ItemTypes::CORNSEED, 1}
         };
-        const static inline std::map<ItemTypes, double> outputs_{
+        std::map<ItemTypes, double> outputs_{
             {ItemTypes::CORN, 1}
         };
 
-        FarmCorn(){
+        FarmCorn(): Recipe(RecipeTypes::FARMCORN)
+        {
             effort_req_ = DEBUG? 1.0: 10.0;
+            SetInputs(inputs_);
+            SetOutputs(outputs_);
         }
 };
 

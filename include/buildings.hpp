@@ -29,39 +29,40 @@ class Building {
         XY<double> center_{0, 0};
         BuildingTypes building_type_;
         BuildingStatus building_status_;
-        std::map<RecipeTypes, Recipe> recipes_; // allowable recipes in this building
+        std::vector<RecipePtr> recipes_; // allowable recipes in this building
         int level_{0}; // level of building, 0 is base level
         std::map<ItemTypes, double> inventory_map_; // ItemType -> amount
         std::map<ItemTypes, double> item_reqs_map_; // ItemType -> required amount
         double effort_val_{0.0}; // effort "units"
         double construction_effort_req_{1.0}; // effort "units"
-        RecipeTypes active_recipe_{RecipeTypes::NONE}; // recipe currently being worked on
+        int active_recipe_idx_{-1}; // recipe currently being worked on
 
         bool CheckItemReqs();
         void update(double dt);
         void AddToInventory(ItemTypes itemType, double amount);
         BuildingStatus GetStatus(){return building_status_;}
-        RecipePtr GetRecipe(RecipeTypes recipe_type){return std::shared_ptr<Recipe>(&recipes_[recipe_type]);}
+        RecipePtr GetRecipe(int idx){return recipes_[idx];}
+        RecipePtr GetActiveRecipe(){return recipes_[active_recipe_idx_];}
+        void SetRecipes(std::vector<RecipePtr> recipes){recipes_ = recipes;}
         std::vector<std::string> GetRecipeNames();
-        void SetActiveRecipe(RecipeTypes recipe_type){active_recipe_ = recipe_type;}
-        void SetActiveRecipe(int idx);
+        void SetActiveRecipe(int idx){active_recipe_idx_ = idx;}
+        std::map<ItemTypes, double> GetItemMap(){return inventory_map_;}
 
 };
 typedef std::shared_ptr<Building> BuildingPtr;
+const sf::Color to_color(BuildingPtr p);
 
 class Workspace : public Building
 {
     public:
-        const static inline std::map<RecipeTypes, Recipe> recipes_{
-            {RecipeTypes::PROCESSCORNSTALK, ProcessCornstalk()}
-        };
 
         Workspace(){
+            SetRecipes({std::make_shared<ProcessCornstalk>(), std::make_shared<MakePlantRope>()});
             building_type_ = BuildingTypes::WORKSPACE;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
             construction_effort_req_ = DEBUG? 1.0: 3.0;
-            active_recipe_ = RecipeTypes::PROCESSCORNSTALK;
+            active_recipe_idx_ = 0;
         }
 };
 class Storagespace : public Building
@@ -78,12 +79,12 @@ class Farm : public Building
 {
     public:
         Farm(){
+            SetRecipes({std::make_shared<FarmCorn>()});
             building_type_ = BuildingTypes::FARM;
             building_status_ = BuildingStatus::PRECONSTRUCTION;
             level_ = 0;
             construction_effort_req_ = DEBUG? 1.0: 30.0;
-            recipes_[RecipeTypes::FARMCORN] = FarmCorn();
-            active_recipe_ = RecipeTypes::FARMCORN;
+            active_recipe_idx_ = 0;
         }
 };
 

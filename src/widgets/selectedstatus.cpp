@@ -17,8 +17,13 @@ SelectedStatus::SelectedStatus(double x, double y, double w, double h, MapPtr ma
 void SelectedStatus::onUpdate(double dt, double x, double y){
     // check if selected unit changed. If so, trigger a redraw
     auto unit = map_ref_->GetFirstSelectedObject();
+    auto tile = map_ref_->selected_tile_ptr_;
     if (unit != selected_unit_ptr_){
         selected_unit_ptr_ = unit;
+        reDraw();
+    }
+    if (tile != selected_tile_ptr_){
+        selected_tile_ptr_ = tile;
         reDraw();
     }
 
@@ -129,8 +134,8 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                     str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->construction_effort_req_);
                     break;
                 case BuildingStatus::READY:
-                    str += "\n Recipe " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_) + " Reqs: ";
-                    for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->GetRecipe(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_)->inputs_){
+                    str += "\n  Recipe " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->GetType()) + "\n    Reqs: ";
+                    for (auto item : map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->inputs_){
                         str += to_full_string(item.first);
                         str += ": ";
                         str += std::to_string(item.second);
@@ -138,8 +143,8 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                     }
                     break;
                 case BuildingStatus::OPERATING:
-                    str += "\n Recipe Progress: " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->effort_val_);
-                    str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->GetRecipe(map_ref_->selected_tile_ptr_->building_ptr_->active_recipe_)->effort_req_);
+                    str += "\n      Recipe Progress: " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->effort_val_);
+                    str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->effort_req_);
                     break;
             }
 
@@ -153,6 +158,8 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
     AddChild(text_);
     AddChild(button_active_task_);
     AddChild(tasks_list_);
+    AddChild(building_widget_);
+    AddChild(button_building_widget_);
 }
 void SelectedStatus::reDraw(){
     // redraw widgets that require persistence but also sometimes change
@@ -181,24 +188,28 @@ void SelectedStatus::reDraw(){
             });
 
         }
+    } else {
+        tasks_list_ = nullptr;
+        button_active_task_ = nullptr;
     }
 
     // tile GUI
-    if (map_ref_->selected_tile_ptr_ != nullptr){
-        if (map_ref_->selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
+    if (selected_tile_ptr_ != nullptr){
+        if (selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
             // make building widget
-            building_widget_ = std::make_shared<BuildingWidget>(200, 200, 400, 400, map_ref_->selected_tile_ptr_->building_ptr_);
-            AddChild(building_widget_);
+            building_widget_ = std::make_shared<BuildingWidget>(200, 200, 400, 400, selected_tile_ptr_->building_ptr_);
             building_widget_->MakeInvisible();
 
             // make building widget visibility button
-            auto building_widget_button = std::make_shared<Button>(50, 400, "Building Widget");
-            building_widget_button->SetOnClickCallback([this](){
+            button_building_widget_ = std::make_shared<Button>(50, 400, "Building Widget");
+            button_building_widget_->SetOnClickCallback([this](){
                 building_widget_->ToggleVisibility();
             });
-
+        } else {
+            building_widget_ = nullptr;
+            button_building_widget_ = nullptr;
         }
-    }
+    } 
 
     // add children here?
 }

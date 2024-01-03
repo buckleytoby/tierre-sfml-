@@ -3,18 +3,15 @@
 
 const std::string to_string(ActionTypes action_type_){
     switch (action_type_){
-        case ActionTypes::Default:
-            return "Default";
-        case ActionTypes::SelectClosestBuilding:
-            return "SelectClosestBuilding";
-        case ActionTypes::SetGoalToSelectedBuilding:
-            return "SetGoalToSelectedBuilding";
-        case ActionTypes::MoveTowardsGoal:
-            return "MoveTowardsGoal";
-        case ActionTypes::TransferInventory:
-            return "TransferInventory";
-        default:
-            return "Unknown";
+        case ActionTypes::Default: return "Default";
+        case ActionTypes::SelectClosestBuilding: return "Select Closest Building";
+        case ActionTypes::SetGoalToSelectedBuilding: return "Set Goal To Selected Building";
+        case ActionTypes::MoveTowardsGoal: return "Move Towards Goal";
+        case ActionTypes::TransferInventory: return "Transfer Inventory";
+        case ActionTypes::SetGoalToBuilding: return "Set Goal To Building";
+        case ActionTypes::TakeInventory: return "Take Inventory";
+        case ActionTypes::end: return "end";
+        default: return "UNKNOWN";
     }
 }
 ////////////////////////////// Action //////////////////////////////

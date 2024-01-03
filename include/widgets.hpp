@@ -202,9 +202,13 @@ typedef std::shared_ptr<BuildingWidget> BuildingWidgetPtr;
 class SelectedStatus: public Widget
 {
     public:
+        // analog objects
         MapPtr map_ref_;
         TaskManagerPtr task_manager_ptr_;
         DynamicObjectPtr selected_unit_ptr_{nullptr};
+        TilePtr selected_tile_ptr_{nullptr};
+
+        // UI widgets
         RectWidgetPtr border_;
         TextBoxPtr text_;
         ButtonPtr button_active_task_;

@@ -44,6 +44,7 @@ class Resource
         }
 
 };
+typedef std::shared_ptr<Resource> ResourcePtr;
 
 class Lumber : public Resource
 {

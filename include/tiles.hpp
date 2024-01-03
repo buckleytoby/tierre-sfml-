@@ -23,5 +23,6 @@ class Tile {
         void AddResource(std::shared_ptr<Resource> resource_ptr);
         bool HasBuildingPtr(){return building_ptr_ != nullptr;}
 };
+typedef std::shared_ptr<Tile> TilePtr;
 
 #endif // TILES_HPP
