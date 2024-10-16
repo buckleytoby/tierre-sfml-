@@ -11,6 +11,7 @@
 #include "widgets.hpp"
 #include "gui.hpp"
 #include "viewport.hpp"
+#include "art.hpp"
 
 const std::string to_string(ItemTypes p);
 const std::string to_string(WorkerStates p);
@@ -18,25 +19,3 @@ const std::string to_full_string(WorkerStates p);
 const std::string to_string(NeedsTypes p);
 
 
-
-class GamePlay : GameScreen
-{
-    public:
-        Viewport viewport_;
-        Map map_;
-        HUD hud_;
-
-        // this is the task manager object. It has an analog UI element which is TaskManagerWidget inside of hud_
-        TaskManagerPtr task_manager_ptr_;
-
-        GamePlay();
-        ~GamePlay();
-        void draw(sf::RenderWindow& window);
-        void update(double dt);
-        GameScreenInputs HandleInput(sf::Event& event);
-        void load(sf::RenderWindow& window);
-        void unload();
-
-        // tests
-        void MakeTask1();
-};

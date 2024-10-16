@@ -63,6 +63,7 @@ class Recipe {
         void SetInputs(std::map<ItemTypes, double> inputs){inputs_ = inputs;}
         void SetOutputs(std::map<ItemTypes, double> outputs){outputs_ = outputs;}
         RecipeTypes GetType(){return type_;}
+        bool CanFulfill(Inventory* inventory);
 };
 typedef std::shared_ptr<Recipe> RecipePtr;
 

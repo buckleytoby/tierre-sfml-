@@ -7,12 +7,75 @@ SelectedStatus::SelectedStatus(double x, double y, double w, double h, MapPtr ma
 
     // border rectangle
     border_ = std::make_shared<RectWidget>(0, 0, w, h);
-    AddChild(border_);
-
     text_ = std::make_shared<TextBox>(0, 0, "Status: ");
+    AddChild(border_);
     AddChild(text_);
 
+    //// map-level actions
+    //
+    button_unit_selector = std::make_shared<Button>(50, 450, "Select Units");
+    button_unit_selector->SetOnClickCallback([this](){
+        map_ref_->SetOnSelectToSelectUnits();
+        return true;
+    });
+    AddChild(button_unit_selector);
 
+
+    //// core actions
+    // make idx_to_action_type_map_
+    for (int i=0; i < COREACTIONS.size(); i++){
+        core_actions_.push_back(to_string(COREACTIONS[i]));
+        idx_to_action_type_map_[i] = COREACTIONS[i];
+    }
+    button_core_actions = std::make_shared<Button>(50, 500, "Core Actions");
+    list_core_actions = std::make_shared<Dropdown>(200, 500, core_actions_);
+    list_core_actions->MakeInvisible();
+    // button triggers visibility
+    button_core_actions->SetOnClickCallback([this](){
+        list_core_actions->ToggleVisibility();
+        return true;
+    });
+    //
+    list_core_actions->SetOnClickCallback([this](){
+        auto idx = list_core_actions->GetClickedIdx();
+        auto enumval = idx_to_action_type_map_[idx];
+        map_ref_->SetOnSelectFromContext(enumval);
+        list_core_actions->MakeInvisible();
+        return true;
+    });
+    AddChild(button_core_actions);
+    AddChild(list_core_actions);
+
+    //// buildings
+    // make idx_to_building_type_map_
+    for (int i=0; i < BUILDINGTYPES.size(); i++){
+        buildings_.push_back(to_string(BUILDINGTYPES[i]));
+        idx_to_building_type_map_[i] = BUILDINGTYPES[i];
+    }
+    button_buildings = std::make_shared<Button>(50, 550, "Buildings");
+    list_buildings = std::make_shared<Dropdown>(200, 550, buildings_);
+    list_buildings->MakeInvisible();
+    // button triggers visibility
+    button_buildings->SetOnClickCallback([this](){
+        list_buildings->ToggleVisibility();
+        return true;
+    });
+    //
+    list_buildings->SetOnClickCallback([this](){
+        auto idx = list_buildings->GetClickedIdx();
+        auto enumval = idx_to_building_type_map_[idx];
+        map_ref_->MakeBuilding(enumval);
+        list_buildings->MakeInvisible();
+        return true;
+    });
+    AddChild(button_buildings);
+    AddChild(list_buildings);
+
+    // add all children
+    AddChild(button_active_task_);
+    AddChild(tasks_list_);
+    AddChild(building_widget_);
+    AddChild(button_building_widget_);
 }
 void SelectedStatus::onUpdate(double dt, double x, double y){
     // check if selected unit changed. If so, trigger a redraw
@@ -39,12 +102,12 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
             auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
             str += "Worker";
             // add inventory
-            str += "\nInventory: ";
+            str += "\nInventory: \n  ";
             for (auto& item : worker->GetInventoryMap()){
                 str += to_full_string(item.first);
                 str += ": ";
                 str += std::to_string(item.second->GetAmount());
-                str += ", ";
+                str += "\n  ";
             }
             // add state
             str += "\nState: ";
@@ -67,12 +130,21 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                 }
             }
             // add needs
-            str += "\nNeeds: ";
+            str += "\nNeeds: \n  ";
             for (auto& need : worker->needs_map_){
                 str += to_string(need.first);
                 str += ": ";
                 str += std::to_string(need.second.val_);
-                str += ", ";
+                str += "\n  ";
+            }
+
+            // add stats
+            str += "\nStats: \n  ";
+            for (auto& stat : worker->stats_map_){
+                str += to_string(stat.first);
+                str += ": ";
+                str += std::to_string(stat.second);
+                str += "\n  ";
             }
 
 
@@ -80,9 +152,9 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
             str += "Generic";
         }
         // add position
-        str += "\nPos: " + std::to_string(dynamic_object_ptr->footprint_.x_);
+        str += "\nPos: " + std::to_string(dynamic_object_ptr->GetX());
         str += ", ";
-        str += std::to_string(dynamic_object_ptr->footprint_.y_);
+        str += std::to_string(dynamic_object_ptr->GetY());
 
 
 
@@ -99,34 +171,35 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
         str += std::to_string(map_ref_->selected_tile_ptr_->y_);
         // add resources
         str += "\nResources: ";
-        for (auto& resource : map_ref_->selected_tile_ptr_->resource_map_){
-            str += to_full_string(resource.second->resource_type_);
+        if(map_ref_->selected_tile_ptr_->HasResource()){
+            auto resource = map_ref_->selected_tile_ptr_->GetResource();
+            str += to_full_string(resource->GetResourceType());
             str += ": ";
-            str += std::to_string(resource.second->GetTotal());
+            str += std::to_string(resource->GetTotal());
             str += ", ";
         }
         // add building
         if (map_ref_->selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
             str += "\nBuilding: ";
-            str += to_full_string(map_ref_->selected_tile_ptr_->building_type_);
+            str += to_string(map_ref_->selected_tile_ptr_->building_type_);
             str += "\nBuilding Status: " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->GetStatus());
-            str += "\nInventory: ";
-            for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->inventory_map_){
+            str += "\nInventory: \n  ";
+            for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->GetItemMap()){
                 str += to_full_string(item.first);
                 str += ": ";
-                str += std::to_string(item.second);
-                str += ", ";
+                str += std::to_string(item.second->GetAmount());
+                str += "\n  ";
             }
             // switch over building status
             switch (map_ref_->selected_tile_ptr_->building_ptr_->GetStatus()){
                 case BuildingStatus::PRECONSTRUCTION:
                     // iterate through item_reqs_map
-                    str += "\nItem Reqs: ";
+                    str += "\nItem Reqs: \n  ";
                     for (auto& item : map_ref_->selected_tile_ptr_->building_ptr_->item_reqs_map_){
                         str += to_full_string(item.first);
                         str += ": ";
                         str += std::to_string(item.second);
-                        str += ", ";
+                        str += "\n  ";
                     }
                     break;
                 case BuildingStatus::CONSTRUCTION:
@@ -134,12 +207,15 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
                     str += " / " + std::to_string(map_ref_->selected_tile_ptr_->building_ptr_->construction_effort_req_);
                     break;
                 case BuildingStatus::READY:
-                    str += "\n  Recipe " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->GetType()) + "\n    Reqs: ";
+                    if (!(map_ref_->selected_tile_ptr_->building_ptr_->HasActiveRecipe()))
+                        break;
+                        
+                    str += "\n  Recipe \n  " + to_full_string(map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->GetType()) + "\n    Reqs: ";
                     for (auto item : map_ref_->selected_tile_ptr_->building_ptr_->GetActiveRecipe()->inputs_){
                         str += to_full_string(item.first);
                         str += ": ";
                         str += std::to_string(item.second);
-                        str += ", ";
+                        str += "\n  ";
                     }
                     break;
                 case BuildingStatus::OPERATING:
@@ -150,16 +226,9 @@ void SelectedStatus::onUpdate(double dt, double x, double y){
 
         }
     }
+    RemoveChild(text_);
     text_ = std::make_shared<TextBox>(30, 30, str);
-    
-    // reset children
-    children_.clear();
-    AddChild(border_);
     AddChild(text_);
-    AddChild(button_active_task_);
-    AddChild(tasks_list_);
-    AddChild(building_widget_);
-    AddChild(button_building_widget_);
 }
 void SelectedStatus::reDraw(){
     // redraw widgets that require persistence but also sometimes change
@@ -174,17 +243,23 @@ void SelectedStatus::reDraw(){
             }
 
             // active tasks list
+            RemoveChild(tasks_list_);
             tasks_list_ = std::make_shared<Dropdown>(200, 600, task_manager_ptr_->GetTaskNames());
+            AddChild(tasks_list_);
             tasks_list_->SetOnClickCallback([this, worker](){
                 // cb: set this worker's task to the selected idx from the dropdown menu
-                worker->SetTask(task_manager_ptr_->GetTask(tasks_list_->GetClickedIdx()));
+                worker->SetTask(task_manager_ptr_->CopyTask(tasks_list_->GetClickedIdx()));
                 reDraw();
+                return true;
             });
             tasks_list_->MakeInvisible();
             
+            RemoveChild(button_active_task_);
             button_active_task_ = std::make_shared<Button>(50, 600, "Active Task: \n" + task_str);
+            AddChild(button_active_task_);
             button_active_task_->SetOnClickCallback([this](){
                 tasks_list_->ToggleVisibility();
+                return true;
             });
 
         }
@@ -197,13 +272,18 @@ void SelectedStatus::reDraw(){
     if (selected_tile_ptr_ != nullptr){
         if (selected_tile_ptr_->building_type_ != BuildingTypes::NONE){
             // make building widget
+            RemoveChild(building_widget_);
             building_widget_ = std::make_shared<BuildingWidget>(200, 200, 400, 400, selected_tile_ptr_->building_ptr_);
+            AddChild(building_widget_);
             building_widget_->MakeInvisible();
 
             // make building widget visibility button
+            RemoveChild(button_building_widget_);
             button_building_widget_ = std::make_shared<Button>(50, 400, "Building Widget");
+            AddChild(button_building_widget_);
             button_building_widget_->SetOnClickCallback([this](){
                 building_widget_->ToggleVisibility();
+                return true;
             });
         } else {
             building_widget_ = nullptr;

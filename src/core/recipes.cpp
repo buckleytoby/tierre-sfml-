@@ -19,3 +19,20 @@ const std::string to_full_string(RecipeTypes p){
     }
     return ""; // or an empty string
 }
+
+bool Recipe::CanFulfill(Inventory* inventory){
+    // check if inventory has enough items to fulfill recipe
+    // iterate over inputs
+    for (auto& input : inputs_){
+        // check if item in inventory
+        if (!inventory->find(input.first)){
+            return false;
+        }
+        // check if amount in inventory is greater than required
+        if (inventory->GetItem(input.first)->GetAmount() < input.second){
+            return false;
+        }
+    }
+    // if got here, then all inputs are fulfilled
+    return true;
+}

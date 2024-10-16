@@ -10,18 +10,18 @@ Dropdown::Dropdown(double x, double y, std::vector<std::string> strs): Widget(x,
     CalculateBounds();
 }
 void Dropdown::AddItem(std::string str){
-    // button callback
-    auto button_cb = [this](){
-        // set clicked idx
-        // TODO: change this to be id based
-        clicked_idx_ = GetHoveredChild();
-        // click me too. Can remove this if I choose to change the click behavior to click the parent object too
-        clicked_ = true;
-        onClick();
-    };
     // x, y is w.r.t. parent
     auto button = std::make_shared<Button>(0, bounds_.height + 10, str);
-    button->SetOnClickCallback(button_cb);
+    button->SetOnClickCallback([this, button](){
+        // set clicked idx
+        // TODO: change this to be id based
+        this->clicked_idx_ = GetHoveredChild();
+        this->clicked_idxs_[clicked_idx_] = true;
+        // click me too. Can remove this if I choose to change the click behavior to click the parent object too
+        this->clicked_ = true; 
+        this->onClick(); // call the parent's onClick
+        return true;
+    });
     AddChild(button);
     CalculateBounds();
 }
@@ -44,6 +44,15 @@ int Dropdown::GetClickedIdx(){
     // return -1;
     return clicked_idx_;
 }
+std::vector<int> Dropdown::GetClickedIdxs(){
+    std::vector<int> clicked_idxs;
+    for (int i=0; i<children_.size(); i++){
+        if (clicked_idxs_[i]){
+            clicked_idxs.push_back(i);
+        }
+    }
+    return clicked_idxs;
+}
 void Dropdown::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
 
 }
@@ -64,3 +73,12 @@ WidgetInputs Dropdown::HandleInput(sf::Event& event){
 //         }
 //     }
 // }
+void Dropdown::SetTextColor(sf::Color color){
+    // invert the color of the clicked child
+    if (clicked_idx_ != -1){
+        auto child = children_[clicked_idx_];
+        // cast to button
+        auto button = std::dynamic_pointer_cast<Button>(child);
+        button->SetTextColor(color);
+    }
+}

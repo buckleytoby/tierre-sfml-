@@ -16,18 +16,21 @@ TaskManagerWidget::TaskManagerWidget(double x, double y, TaskManagerPtr task_man
         task_manager_ptr_->NewTask();
         // must redraw
         reDraw();
+        return true;
     });
     remove_task = MakeButton(200, 0, "Remove Task");
     remove_task->SetOnClickCallback([this](){
         task_manager_ptr_->RemoveTask(list_of_tasks->GetClickedIdx());
         // must redraw
         reDraw();
+        return true;
     });
     edit_task = MakeButton(400, 0, "Edit Task");
     edit_task->SetOnClickCallback([this](){
         task_manager_ptr_->EditTask(list_of_tasks->GetClickedIdx());
         // must redraw
         reDraw();
+        return true;
     });
 
     // invoke redraw
@@ -52,11 +55,13 @@ void TaskManagerWidget::reDraw(){
             (ActionTypes)list_of_actions->GetClickedIdx()
         );
         reDraw();
+        return true;
     });
     remove_action = MakeButton(800, 0, "Remove Action");
     remove_action->SetOnClickCallback([this](){
         task_manager_ptr_->active_task_->RemoveAction();
         reDraw();
+        return true;
     });
 
     // add all widgets

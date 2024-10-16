@@ -20,6 +20,11 @@ TextBox::TextBox(double x, double y, std::string str, double border_thickness): 
     text_.setOutlineThickness(border_thickness_);
     CalculateBounds();
 }
+void TextBox::SetText(std::string str){
+    text_str_ = str;
+    text_.setString(text_str_);
+    CalculateBounds();
+}
 
 void TextBox::onDraw(sf::RenderTarget& target, const sf::Transform& transform) const {
     target.draw(text_, transform);

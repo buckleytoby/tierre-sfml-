@@ -2,28 +2,37 @@
 #ifndef GLOBALS_HPP_INCLUDED
 #define GLOBALS_HPP_INCLUDED
 
-template <typename T>
-struct Rect
-{
-    T x_{0}, y_{0}, width_{0}, height_{0};
-};
-template <typename T>
-struct XY
-{
-    T x_{0}, y_{0};
-};
-template <typename T>
-double eucl_dist(XY<T> xy1, XY<T> xy2){
-    return std::abs(xy1.x_ - xy2.x_) + std::abs(xy1.y_ - xy2.y_);
-}
+#include <memory>
+#include <mutex>
+#include "SFML/Graphics.hpp"
 
 // globals
 extern bool DEBUG;
 extern int FRAMERATE;
 extern double DELTATIME; // tie physics to framerate
-extern int PIXELS_PER_METER; // meters * PIXELS_PER_METER = pixels
+extern double PIXELS_PER_METER_X; // meters * PIXELS_PER_METER = pixels
+extern double PIXELS_PER_METER_Y; // meters * PIXELS_PER_METER = pixels
+extern double VIEWPORT_X;
+extern double VIEWPORT_Y;
+extern double VIEWPORT_W;
+extern double VIEWPORT_H;
+
 extern unsigned int SCREENWIDTH;
 extern unsigned int SCREENHEIGHT;
+
+// texture class global handle
+struct Textures
+{
+        sf::Texture art;
+        sf::Texture worker_m;
+        sf::Texture worker_f;
+        sf::Texture lumber;
+        sf::Texture stone;
+        sf::Texture water;
+        sf::Texture grass;
+        sf::Texture cornstalk;
+};
+extern Textures* TEXTURES;
 
 enum class GamescreenStates {
     TITLE_SCREEN,

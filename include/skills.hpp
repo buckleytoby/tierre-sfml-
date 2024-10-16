@@ -13,6 +13,7 @@ enum class SkillTypes {
     HAULING,
     MINING,
     CHOPPING,
+    GATHERING,
     CONSTRUCTION,
     CRAFTING,
     END_OF_ENUM_VAL
@@ -50,12 +51,19 @@ class Skill
         double CalcEffortUnits();
 
 };
+typedef std::shared_ptr<Skill> SkillPtr;
 
 class Construction : public Skill
 {
     public:
         Construction(){skill_type_ = SkillTypes::CONSTRUCTION; exp_a_ = 100.0; exp_b_ = 1.1; exp_c_ = 0.0; min_effort_ = 0.01; max_effort_ = 1.0;}
 };
+class Gathering: public Skill
+{
+    public:
+        Gathering(){skill_type_ = SkillTypes::GATHERING; exp_a_ = 100.0; exp_b_ = 1.1; exp_c_ = 0.0; min_effort_ = 0.1; max_effort_ = 2.0;}
+};
+
 
 class SkillFactory
 {
@@ -65,6 +73,9 @@ class SkillFactory
             {
                 case SkillTypes::CONSTRUCTION:
                     return std::make_shared<Construction>();
+                    break;
+                case SkillTypes::GATHERING:
+                    return std::make_shared<Gathering>();
                     break;
                 default:
                     return std::make_shared<Skill>();

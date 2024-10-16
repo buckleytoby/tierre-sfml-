@@ -4,7 +4,8 @@
 
 #include <sfml/Graphics.hpp>
 #include "BitWise.hpp"
-
+#include "globals.hpp"
+#include "interactive.hpp"
 
 enum class ViewportInputs
 {
@@ -24,16 +25,20 @@ enum class ViewportActions
     Flag8 = 1 << 7  // 128
 };
 
-class Viewport {
+class Viewport: public Interactive
+{
     public:
         double x_{0}, y_{0}, width_{0}, height_{0}; // in meters
         double map_mouse_x_{0}, map_mouse_y_{0}; // in meters
         double mouse_x_{0}, mouse_y_{0}; // in pixels
         BitFlag viewport_actions_{0};
-        double scroll_sensitivity_{1.0}; // m/s
-        double zoom_sensitivity_{5.0}; // m per tick, width
-        double min_width_{5.0}, min_height_{5.0}; // in meters
+        double scroll_sensitivity_{0.5}; // m/s
+        double zoom_sensitivity_{0.5}; // m per tick, width
+        double min_width_{10.0}, min_height_{5.0}; // in meters
         sf::RenderWindow* window_ptr_;
+
+        // ctor
+        Viewport();
 
         void SetX(double x);
         void SetY(double y);
@@ -43,7 +48,7 @@ class Viewport {
 
         void update(double dt);
         void UpdateMousePosition();
-        ViewportInputs HandleInput(sf::Event& event);
+        virtual HandleInputNS::InputResult onHandleInput(sf::Event& event);
 
         double GetPixelsPerMeterX(sf::RenderWindow& window);
         double GetPixelsPerMeterY(sf::RenderWindow& window);
@@ -67,6 +72,12 @@ class Viewport {
         double GetY();
         double GetWidth();
         double GetHeight();
+
+        // get edges of bounding rect, in game coords
+        double GetLeft(){return x_;}
+        double GetRight(){return x_ + width_;}
+        double GetBottom(){return y_;}
+        double GetTop(){return y_ + height_;}
 };
 typedef std::shared_ptr<Viewport> ViewportPtr;
 

@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <assert.h>
-enum class EFlagValue
+enum class BitEnum
 {
     Flag1 = 1 << 0, // 1
     Flag2 = 1 << 1, // 2
@@ -19,30 +19,30 @@ enum class EFlagValue
 struct BitFlag
 {
     //Sets flag to true
-    void SetFlag(EFlagValue flag)
+    void SetFlag(BitEnum flag)
     {
         m_FlagValue |= (int)flag;
     }
 
     //Sets flag to false
-    void UnsetFlag(EFlagValue flag)
+    void UnsetFlag(BitEnum flag)
     {
         m_FlagValue &= ~(int)flag;
     }
 
     //Sets a flag value from true to false and vice versa
-    void FlipFlag(EFlagValue flag)
+    void FlipFlag(BitEnum flag)
     {
         m_FlagValue ^= (int)flag;
     }
 
     //Check whether a flag is set to true
-    bool HasFlag(EFlagValue flag)
+    bool HasFlag(BitEnum flag)
     {
         return (m_FlagValue & (int)flag) == (int)flag;
     }
 
-    bool HasAnyFlag(EFlagValue multiFlag)
+    bool HasAnyFlag(BitEnum multiFlag)
     {
         return (m_FlagValue & (int)multiFlag) != 0;
     }

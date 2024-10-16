@@ -20,6 +20,7 @@ BuildingWidget::BuildingWidget(double x, double y, double w, double h, BuildingP
             recipes_list_->GetClickedIdx()
         );
         reDraw();
+        return true;
     });
     AddChild(recipes_list_);
 }

@@ -7,6 +7,10 @@
 #include "viewport.hpp"
 #include "map.hpp"
 #include "taskmanager.hpp"
+#include "interactive.hpp"
+
+// forward declarations
+class Widget; typedef std::shared_ptr<Widget> WidgetPtr;
 
 
 enum class GUIActions
@@ -27,20 +31,24 @@ enum class GUIInputs
     HANDLED,
 };
 
-class GUI
+class GUI: public Interactive
 {
     public:
         std::vector<WidgetPtr> widgets_;
         double mouse_x_{0}, mouse_y_{0}; // in meters
-        MapPtr map_ref_{nullptr};
-        ViewportPtr viewport_ref_{nullptr};
+        MapPtr map_ref_;
+        ViewportPtr viewport_ref_;
         sf::Font font_;
 
+        // ctor
+        GUI();
+
         void Draw(sf::RenderWindow& window);
-        GUIInputs HandleInput(sf::Event& event);
+        virtual HandleInputNS::InputResult onHandleInput(sf::Event& event);
         void Update(double dt);
         void SetMousePosition(double x, double y){mouse_x_ = x; mouse_y_ = y;}
         void AddWidget(WidgetPtr widget){widgets_.push_back(widget);}
+        void RemoveWidget(int id);
 };
 
 // GUI specific to the gameplay gamescreen
@@ -49,12 +57,11 @@ class HUD: public GUI
 private:
     using inherited = GUI;
 public:
-        TaskManagerWidgetPtr task_manager_panel_ptr_{nullptr};
         WidgetPtr selected_unit_status_ptr_{nullptr}; 
 
         // void Draw(sf::RenderWindow& window);
 
-        HUD();
+        // HUD();
 
 };
 

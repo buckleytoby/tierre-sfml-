@@ -1,5 +1,5 @@
 #include "dynamic_objects.hpp"
-
+int DynamicObject::id_counter_ = 0;
 
 const std::string to_string(WorkerStates p){
   switch(p)
@@ -11,6 +11,10 @@ const std::string to_string(WorkerStates p){
     case WorkerStates::GATHERIDLE: return "gatheridle";
     case WorkerStates::GATHERING: return "gathering";
     case WorkerStates::CONSTRUCTING: return "constructing";
+    case WorkerStates::CONSTRUCTINGIDLE: return "constructingidle";
+    case WorkerStates::CRAFTING: return "crafting";
+    case WorkerStates::CRAFTINGIDLE: return "craftingidle";
+    case WorkerStates::INFERRING: return "inferring";
 
   }
   return ""; // or an empty string
@@ -26,82 +30,223 @@ const std::string to_string(NeedsTypes p){
   }
   return ""; // or an empty string
 }
+std::string to_string(WorkerStats p){
+    switch(p)
+    {
+        case WorkerStats::CURRCARRY: return "Current Carry";
+        case WorkerStats::MAXCARRY: return "Max Carry";
+    
+    }
+    return ""; // or an empty string
+    
+}
 
 
 /////////////////////////////////////// DynamicObject ///////////////////////////////////////
-void DynamicObject::update(double dt){
+DynamicObject::DynamicObject(std::string name): GameObject(name){
+    immediate_surroundings_ = std::make_shared<ImmediateSurroundings>();
+    nearby_surroundings_ = std::make_shared<NearbySurroundings>();
+}
+void DynamicObject::selfUpdate(double dt){
     // update the dynamic object
     double dx = 0;
     double dy = 0;
     // if over the bitwise actions
-    if (dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_UP)){
+    if (dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_UP)){
         dy += speed_;
     }
-    if (dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_DOWN)){
+    if (dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_DOWN)){
         dy -= speed_;
     }
-    if (dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_LEFT)){
+    if (dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_LEFT)){
         dx -= speed_;
     }
-    if (dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_RIGHT)){
+    if (dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_RIGHT)){
         dx += speed_;
     }
     // diagonal movement check
-    if ((dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_UP) || dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_DOWN)) && (dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_LEFT) || dynamic_object_actions_.HasFlag((EFlagValue)DynamicObjectActions::MOVE_RIGHT))){
+    if ((dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_UP) || dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_DOWN)) && (dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_LEFT) || dynamic_object_actions_.HasFlag((BitEnum)DynamicObjectActions::MOVE_RIGHT))){
         dx /= 1.41;
         dy /= 1.41;
     }
+
+    // move away from overlapping dynamic objects
+    if (nearby_surroundings_->dynamic_objects_.size() > 0){
+        for (auto dynamic_object : nearby_surroundings_->dynamic_objects_){
+            // check if it's me
+            if (id_ == dynamic_object->id_){
+                continue;
+            }
+            // check if overlapping
+            if (dynamic_object->GetBoundingRect().intersects(GetBoundingRect())){
+                // move away from dynamic object
+                auto dist = eucl_dist<double>(GetCenter(), dynamic_object->GetCenter());
+                auto dx_away = (GetCenter().x_ - dynamic_object->GetCenter().x_);
+                auto dy_away = (GetCenter().y_ - dynamic_object->GetCenter().y_);
+                dx += std_sign<double>(dx_away) * speed_ / 10;
+                dy += std_sign<double>(dy_away) * speed_ / 10;
+            }
+        }
+    }
+
     // update x & y
     MoveX(dx * dt);
     MoveY(dy * dt);
 }
-void DynamicObject::SetX(double x){
-    footprint_.x_ = x;
-}
-void DynamicObject::SetY(double y){
-    footprint_.y_ = y;
-}
-void DynamicObject::MoveX(double dx){
-    footprint_.x_ += dx;
-}
-void DynamicObject::MoveY(double dy){
-    footprint_.y_ += dy;
-}
 void DynamicObject::SetSpeed(double speed){
     speed_ = speed;
 }
-bool DynamicObject::PointInFootprint(double x, double y){
-    // check if a point is in the footprint
-    if (x >= footprint_.x_ && x <= footprint_.x_ + footprint_.width_ && y >= footprint_.y_ && y <= footprint_.y_ + footprint_.height_){
-        return true;
-    } else {
-        return false;
+void DynamicObject::ClearAttention(){
+	// clear the attention
+	selected_building_ptr_ = nullptr;
+	selected_resource_ptr_ = nullptr;
+    selected_tile_ptr_ = nullptr;
+}
+bool DynamicObject::HasAttention(){
+    bool yes = false;
+    yes |= AttentionHasObject(); // I think this is all that's needed
+    // yes |= AttentionHasBuilding();
+    // yes |= AttentionHasResource();
+    // yes |= AttentionHasTile();
+    // yes |= AttentionHasRect();
+    return yes;
+}
+void DynamicObject::SelectBuilding(std::shared_ptr<Building> building_ptr){
+    SetAttention(building_ptr);
+}
+void DynamicObject::SelectResource(ResourcePtr resource_ptr){
+    SetAttention(resource_ptr);
+}
+void DynamicObject::SetAttention(TaskPtr ptr){
+    // sets the goal as well
+    if (ptr == nullptr)
+        return;
+    // if task has a rect
+    if (ptr->GetActiveAction()->identifier_rects_.size() > 0){
+        auto rect = ptr->GetActiveAction()->identifier_rects_[0];
+        SetAttention(rect);
     }
+    // if task has a building
+    if (ptr->GetActiveAction()->building_ptr_ != nullptr){
+        SetAttention(ptr->GetActiveAction()->building_ptr_);
+        SetGoalToSelectedBuilding();
+    }
+    // if task has a resource
+    if (ptr->GetActiveAction()->resource_ptr_ != nullptr){
+        SetAttention(ptr->GetActiveAction()->resource_ptr_);
+        SetGoalToSelectedResource();
+    }
+}
+void DynamicObject::SetAttention(BuildingPtr building_ptr){
+    if (building_ptr != selected_building_ptr_){
+        AttentionChanged();
+        selected_building_ptr_ = building_ptr;
+        selected_gameobject_ = building_ptr;
+    }
+}
+void DynamicObject::SetAttention(ResourcePtr resource_ptr){
+    if (resource_ptr != selected_resource_ptr_){
+        AttentionChanged();
+        selected_resource_ptr_ = resource_ptr;
+        selected_gameobject_ = resource_ptr;
+    }
+}
+void DynamicObject::SetAttention(TilePtr tile_ptr){
+    if (tile_ptr != selected_tile_ptr_){
+        AttentionChanged();
+        selected_tile_ptr_ = tile_ptr;
+        selected_gameobject_ = tile_ptr;
+    }
+}
+void DynamicObject::SetGoalToSelectedGameObject(){
+    if (selected_gameobject_ == nullptr){
+        return;
+    }
+    goal_.x_ = selected_gameobject_->GetCenter().x_;
+    goal_.y_ = selected_gameobject_->GetCenter().y_;
+}
+void DynamicObject::SetGoalToSelectedBuilding(){
+    // set the goal to the selected building
+    if (selected_building_ptr_ == nullptr){
+        return;
+    }
+    goal_.x_ = selected_building_ptr_->center_.x_;
+    goal_.y_ = selected_building_ptr_->center_.y_;
+}
+void DynamicObject::SetGoalToSelectedResource(){
+    // set the goal to the selected resource
+    if (selected_resource_ptr_ == nullptr){
+        return;
+    }
+    goal_.x_ = selected_resource_ptr_->GetCenter().x_;
+    goal_.y_ = selected_resource_ptr_->GetCenter().y_;
 }
 /////////////////////////////////////// End DynamicObject ///////////////////////////////////////
 
 /////////////////////////////////////// Worker ///////////////////////////////////////
-Worker::Worker(){
+Worker::Worker(): DynamicObject("worker"){
+    // ctor
+    SetHandleInputCb(std::bind(&Worker::onHandleInput, this, std::placeholders::_1));
+    //
     SetDynamicObjectType(DynamicObjectTypes::WORKER);
+    is_male_ = std::rand() > RAND_MAX / 2 ? true : false;
+    if (is_male_)
+        LoadArt("worker_m");
+    else
+        LoadArt("worker_f");
+    // set height and width
+    bounds_m_.width = 1.0; // in meters
+    bounds_m_.height = 1.5; // in meters
+
+    // set maps
+    needs_map_ = {
+            {NeedsTypes::FOOD, FoodNeed()}
+        };
+    attribute_map_ = {
+            {WorkerAttributeTypes::STRENGTH, Attribute(WorkerAttributeTypes::STRENGTH, 5.0)},
+            {WorkerAttributeTypes::SPEED, Attribute(WorkerAttributeTypes::SPEED, 1.0)}
+        };
+    stats_map_ = {
+            {WorkerStats::CURRCARRY, 0.0},
+            {WorkerStats::MAXCARRY, 10.0}
+        };
 
     // make skills
     // TODO: iterate over enum class properly
     for (int i=0; i<(int)SkillTypes::END_OF_ENUM_VAL; i++){
-        skill_map_[(SkillTypes)i] = Skill((SkillTypes)i);
+        skill_map_[(SkillTypes)i] = SkillFactory::CreateSkill((SkillTypes)i);
+    }
+
+    // 
+    if (DEBUG){
+        // give worker super stats
+        skill_map_[SkillTypes::CONSTRUCTION]->SetLevel(100.0);
+        skill_map_[SkillTypes::GATHERING]->SetLevel(100.0);
+        skill_map_[SkillTypes::CRAFTING]->SetLevel(100.0);
+    }
+}
+bool Worker::CheckState(WorkerStates state){
+    // two modes, either executing task or not
+    if (worker_state_ == WorkerStates::EXECUTINGTASK){
+        return task_worker_state_ == state;
+    }
+    // if not executing task, check state like normal
+    else {
+        return worker_state_ == state;
     }
 }
 void Worker::Die(){
     dynamic_object_actions_.ClearFlag();
     SetState(WorkerStates::DEAD);
 }
-void Worker::update(double dt){
+void Worker::selfUpdate(double dt){
     // check if dead
     if (worker_state_ == WorkerStates::DEAD){
         return;
     }
 
     // update the worker (this is where movement actually happens)
-    inherited::update(dt);
+    inherited::selfUpdate(dt);
 
     // update needs
     for (auto& need : needs_map_){
@@ -115,6 +260,12 @@ void Worker::update(double dt){
                     Die();
                 }
         }
+    }
+
+    // check triggers
+    if (must_update_stats_){
+        UpdateStats();
+        must_update_stats_ = false;
     }
 
     // AI
@@ -147,14 +298,18 @@ void Worker::AI(double dt){
 
     // clear actions
 	// search terms: fsm, finite state machine
+    ResetDynamicObjectActions(); // here?
     switch (worker_state_){
         case WorkerStates::DEAD:
             // do nothing, it's dead. Shouldn't ever get here though.
             break;
         case WorkerStates::IDLE:
-            // Attempt to infer an action based on the attention
-            Reset();
-            InferAction(dt);
+            // Reset stuff, then begin to infer the next action
+            if (infer_actions_ && !InferAction(dt))
+                // no actions to infer from current attention
+                ClearAttention();
+            else
+                ClearAttention();
             break;
 		case WorkerStates::INFERRING:
 			InferAction(dt);
@@ -164,7 +319,7 @@ void Worker::AI(double dt){
             break;
         case WorkerStates::MOVING:
             // move towards goal
-            MoveTowardsGoal();
+            actionMoveTowardsGoal();
             break;
         case WorkerStates::GATHERIDLE:
             // gather resources
@@ -184,7 +339,7 @@ void Worker::AI(double dt){
             break;
         case WorkerStates::CRAFTINGIDLE:
             // crafting
-            Craft(dt);
+            CraftingIdle(dt);
             break;
         case WorkerStates::CRAFTING:
             // crafting
@@ -197,11 +352,6 @@ void Worker::Reset(){
 	ClearAttention();
 	SetState(WorkerStates::IDLE);
 }
-void Worker::ClearAttention(){
-	// clear the attention
-	selected_building_ptr_ = nullptr;
-	selected_resource_ptr_ = nullptr;
-}
 void Worker::SetGoal(double x, double y){
     // set the goal for the worker
     goal_.x_ = x;
@@ -209,7 +359,7 @@ void Worker::SetGoal(double x, double y){
 }
 Rect<double> Worker::GetImmediateSurroundingsRect(){
     // get the immediate surroundings rect
-    auto local_rect = immediate_surroundings_.GetLocalRect();
+    auto local_rect = immediate_surroundings_->GetLocalRect();
 	Rect<double> global_rect = local_rect;
 	global_rect.x_ = local_rect.x_ + GetCenter().x_;
 	global_rect.y_ = local_rect.y_ + GetCenter().y_;
@@ -217,7 +367,7 @@ Rect<double> Worker::GetImmediateSurroundingsRect(){
 }
 Rect<double> Worker::GetNearbySurroundingsRect(){
     // get the nearby surroundings rect
-    auto local_rect = nearby_surroundings_.GetLocalRect();
+    auto local_rect = nearby_surroundings_->GetLocalRect();
 	Rect<double> global_rect = local_rect;
 	global_rect.x_ = local_rect.x_ + GetCenter().x_;
 	global_rect.y_ = local_rect.y_ + GetCenter().y_;
@@ -225,32 +375,31 @@ Rect<double> Worker::GetNearbySurroundingsRect(){
 }
 void Worker::SetState(WorkerStates worker_state) 
 {
-    // this is hacky, but only perform leaving state checks if not switching to EXECUTINGTASK
-    // this won't work when the user right-clicks and then user presses e....., although maybe that's ok
-    if (worker_state != WorkerStates::EXECUTINGTASK){
-        // Check if leaving moving
-        if (worker_state_ == WorkerStates::MOVING){
-            // clear actions
-            ResetDynamicObjectActions();
-        }
+    // two states, either executing task or not
+    if (worker_state_ == WorkerStates::EXECUTINGTASK){
+        task_worker_state_ = worker_state;
     }
-
     // update state
-    worker_state_ = worker_state;
+    else {
+        // check if entering execute task
+        if (worker_state == WorkerStates::EXECUTINGTASK){
+            task_ptr_->onFirst();
+        }
+        worker_state_ = worker_state;
+    }
+}
+void Worker::ClearState(){
+    // clear the state and the task state
+    worker_state_ = WorkerStates::IDLE;
+    task_worker_state_ = WorkerStates::IDLE;
 }
 
 /////////////////////////////////////// Worker Action Primitives ///////////////////////////////////////
-void Worker::SelectBuilding(std::shared_ptr<Building> building_ptr){
-    // select a building
-    // auto success
-    SetState(WorkerStates::IDLE);
-    selected_building_ptr_ = building_ptr;
-}
-DefaultActionFcn Worker::SelectClosestBuilding(){
+bool Worker::SelectClosestBuilding(){
     // iterate over buildings in nearby surroundings
     double min_dist = 999.0;
     bool found = false;
-    for (auto& building : nearby_surroundings_.buildings_){
+    for (auto& building : nearby_surroundings_->buildings_){
         auto dist = eucl_dist<double>(GetCenter(), building->center_);
         if (dist < min_dist){
             min_dist = dist;
@@ -259,25 +408,15 @@ DefaultActionFcn Worker::SelectClosestBuilding(){
         }
     }
     if (found){
-        SetState(WorkerStates::IDLE);
+        return true;
+    } else {
+        return false;
     }
-    return 0;
-}
-DefaultActionFcn Worker::SetGoalToSelectedBuilding(){
-    // set the goal to the selected building
-    if (selected_building_ptr_ == nullptr){
-        return 0;
-    }
-    // auto success
-    SetState(WorkerStates::IDLE);
-    goal_.x_ = selected_building_ptr_->center_.x_;
-    goal_.y_ = selected_building_ptr_->center_.y_;
-    return 0;
 }
 
-DefaultActionFcn Worker::MoveTowardsGoal(){
+bool Worker::MoveTowardsGoal(){
     SetState(WorkerStates::MOVING);
-    // TODO: base off center of footprint
+    // TODO: base off center of bounds
     bool done_x = false;
     bool done_y = false;
 
@@ -286,9 +425,9 @@ DefaultActionFcn Worker::MoveTowardsGoal(){
         done_x = true;
     } else {
         if (GetCenter().x_ < goal_.x_){
-            dynamic_object_actions_.SetFlag((EFlagValue)DynamicObjectActions::MOVE_RIGHT);
+            dynamic_object_actions_.SetFlag((BitEnum)DynamicObjectActions::MOVE_RIGHT);
         } else {
-            dynamic_object_actions_.SetFlag((EFlagValue)DynamicObjectActions::MOVE_LEFT);
+            dynamic_object_actions_.SetFlag((BitEnum)DynamicObjectActions::MOVE_LEFT);
         }
     }
 
@@ -296,140 +435,322 @@ DefaultActionFcn Worker::MoveTowardsGoal(){
         done_y = true;
     } else {
         if (GetCenter().y_ < goal_.y_){
-            dynamic_object_actions_.SetFlag((EFlagValue)DynamicObjectActions::MOVE_UP);
+            dynamic_object_actions_.SetFlag((BitEnum)DynamicObjectActions::MOVE_UP);
         } else {
-            dynamic_object_actions_.SetFlag((EFlagValue)DynamicObjectActions::MOVE_DOWN);
+            dynamic_object_actions_.SetFlag((BitEnum)DynamicObjectActions::MOVE_DOWN);
         }
     }
 
     if (done_x && done_y){
-        SetState(WorkerStates::IDLE);
-    }
-    return 0;
+        return true;
+    } else
+        return false;
 }
-void Worker::Gather(double dt){
-    // gather resources
-
-    // if not gathering, decide which resource to gather and set action_time_ to zero
-    // get first resource in immediatesurroundings
-    if (worker_state_ == WorkerStates::GATHERIDLE){
-        if (immediate_surroundings_.resources_.size() > 0){
-            selected_resource_ptr_ = immediate_surroundings_.resources_[0];
+bool Worker::CheckandMoveTowardsGoal(){
+    // check close enough
+    if (IsCloseEnough(selected_gameobject_))
+        return true;
+    else
+        return MoveTowardsGoal();
+}
+bool Worker::InventoryHasRoom(ResourcePtr ptr){
+    return (stats_map_[WorkerStats::CURRCARRY]+ptr->GetYieldPerGather()) < stats_map_[WorkerStats::MAXCARRY];
+}
+bool Worker::CanGather(ResourcePtr ptr){
+    if (ptr == nullptr)
+        return false;
+    // check if selected resource is gatherable and has resources and we have inventory space
+    return ptr->CanGather() && InventoryHasRoom(ptr);
+}
+void Worker::BeginGather(){BeginGather(0.0);}
+void Worker::BeginGather(double dt){
+    // begin gather
+    if (CanGather(selected_resource_ptr_)){
+        // if entering gathering, then set action_time_ to zero
+        if (!CheckState(WorkerStates::GATHERING))
             action_time_ = 0.0;
             SetState(WorkerStates::GATHERING);
-        } else {
-            // nothing close enough to gather
-            std::cout << "Nothing close enough to gather" << std::endl;
-            SetState(WorkerStates::IDLE);
-            return;
+    } else {
+        SetState(WorkerStates::GATHERIDLE);
+        return;
+    }
+}
+bool Worker::FindGatherResource(){
+    // if not gathering, decide which resource to gather and set action_time_ to zero
+    // get first resource in immediatesurroundings
+    if (CheckState(WorkerStates::GATHERIDLE)){
+        AttentionClearResource();
+        // check if we have an attention rect
+        if (AttentionHasRect()){
+            XY<int> center = XY<int>(GetCenter().x_, GetCenter().y_);
+            for (auto coord: GetAttentionRect()->GetCoordsByEuclDist(center)){
+                auto resource = nearby_surroundings_->GetResource(coord.x_, coord.y_);
+                if (CanGather(resource)){
+                    // set resource to gather
+                    SetAttention(resource);
+                    SetGoalToSelectedResource();
+                    break;
+                }
+            }
         }
     }
 
+    // final sanity check
+    if (!CanGather(selected_resource_ptr_)){
+        return false;
+    }
+    return true;
+}
+void Worker::GatherArea(double dt){
+    // gather resources in area
+    ExecuteCoreAction(dt, 
+        [this](){return FindGatherResource();}, 
+        [this](double dt){GatherCore(dt);}, 
+        [this](){
+            if (!CanGather(selected_resource_ptr_)){
+                SetState(WorkerStates::GATHERIDLE);
+                return false;
+            } else {
+                return true;
+            }
+            });
+}
+void Worker::Gather(double dt){
+    ExecuteCoreAction(dt, 
+        [this](){return FindGatherResource();}, 
+        [this](double dt){GatherCore(dt);}, 
+        [this](){
+            if (!CanGather(selected_resource_ptr_)){
+                SetState(WorkerStates::IDLE);
+                return false;
+            } else {
+                return true;
+            }
+            });
+}
+void Worker::GatherCore(double dt){
+    // doesn't check validity
     // update gather time
-    action_time_ += dt;
+    action_time_ += skill_map_[SkillTypes::GATHERING]->CalcEffortUnits() * dt;
 
     // check if gather time is greater than resource time_to_gather_
     if (action_time_ > selected_resource_ptr_->time_to_gather_){
-        // convert resource to item type
+        // convert resource to item type, slightly hacky
         ResourceTypes resource_type = selected_resource_ptr_->resource_type_;
         ItemTypes item_type = (ItemTypes)resource_type;
 
-        auto amount = selected_resource_ptr_->Extract();
+        auto yield = selected_resource_ptr_->Extract(); // kg
 
         // add resource to inventory
-        AddToInventory(item_type, amount);
+        AddToInventory(item_type, yield);
         
         // set gather time to zero
         action_time_ = 0.0;
-
-        // check if resource is exhausted
-        if (selected_resource_ptr_->GetTotal() <= 0){
-            // set state to GATHERIDLE
-            SetState(WorkerStates::GATHERIDLE);
-        }
     }
 }
-void Worker::Construct(double dt){
-    // construct buildings
+void Worker::ExecuteCoreAction(double dt, std::function<bool()> FindFcn, std::function<void(double)> CoreFcn, std::function<bool()> CheckFcn){
+    // find a valid game object to interact with
+    if (!FindFcn()){
+        SetState(WorkerStates::IDLE);
+        return;
+    }
 
-    // if not constructing, decide which building to construct and set action_time_ to zero
-    // get first building in immediatesurroundings
-    if (worker_state_ == WorkerStates::CONSTRUCTINGIDLE){
-        // iterate over buildings in immediate surroundings
-        for (auto& building : immediate_surroundings_.buildings_){
-            // check if building is ready
-            if (building->building_status_ == BuildingStatus::PRECONSTRUCTION || building->building_status_ == BuildingStatus::CONSTRUCTION){
-                // set building to construct
-                selected_building_ptr_ = building;
-                action_time_ = 0.0;
-                SetState(WorkerStates::CONSTRUCTING);
-                break;
+    // ensure we're close enough
+    if (!CheckandMoveTowardsGoal()){
+        return;
+    }
+
+    // interact with the object
+    CoreFcn(dt);
+    
+    // check if done with this object
+    if (!CheckFcn()){
+        AttentionClear();
+    }
+}
+
+bool Worker::AddToInventory(ItemTypes type, double yield){
+    // check if there's room
+    if (stats_map_[WorkerStats::CURRCARRY] + yield > stats_map_[WorkerStats::MAXCARRY]){
+        return false;
+    }
+    inventory_.AddToInventory(type, yield);
+    must_update_stats_ = true;
+    return true;
+}
+void Worker::BeginConstruct(){
+    // begin construct
+    SetState(WorkerStates::CONSTRUCTINGIDLE);
+}
+bool Worker::CanConstruct(BuildingPtr ptr){
+    // check if selected building is constructable and we have the required items
+    if (ptr == nullptr)
+        return false;
+    return ptr->CanConstruct();
+}
+bool Worker::FindConstructBuilding(){
+    if (!AttentionHasBuilding()){
+        // check if we have an attention rect
+        if (AttentionHasRect()){
+            XY<int> center = XY<int>(GetCenter().x_, GetCenter().y_);
+            for (auto coord: GetAttentionRect()->GetCoordsByEuclDist(center)){
+                auto building = nearby_surroundings_->GetBuilding(coord.x_, coord.y_);
+                if (CanConstruct(building)){
+                    // set resource to gather
+                    SetAttention(building);
+                    SetGoalToSelectedBuilding();
+                    break;
+                }
             }
         }
 
-        if (worker_state_ == WorkerStates::CONSTRUCTINGIDLE){
-            // nothing close enough to construct
-            std::cout << "Nothing close enough to construct" << std::endl;
-            SetState(WorkerStates::IDLE);
-            return;
+        if (!AttentionHasBuilding()){
+            return false;
         }
     }
-    EngageWithBuilding(selected_building_ptr_);
+    return true;
 }
-void Worker::EngageWithBuilding(BuildingPtr building_ptr){
+void Worker::Construct(double dt){
+    ExecuteCoreAction(dt, 
+        [this](){return FindConstructBuilding();}, 
+        [this](double dt){ConstructCore(selected_building_ptr_, dt);}, 
+        [this](){
+            if (!CanConstruct(selected_building_ptr_)){
+                SetState(WorkerStates::IDLE);
+                return false;
+            } else {
+                return true;
+            }
+            });
+}
+void Worker::ConstructCore(BuildingPtr building_ptr, double dt){
     // switch case on building status
     switch (building_ptr->building_status_){
         case BuildingStatus::PRECONSTRUCTION:
-            // transfer required items from inventory to building
-            for (auto& item : building_ptr->item_reqs_map_){
-                // check if item in inventory
-                if (inventory_.find(item.first)){
-                    // amount to transfer
-                    auto amount = std::min(item.second, inventory_.GetItem(item.first)->GetAmount());
-
-                    // remove from inventory
-                    inventory_.GetItem(item.first)->RemoveAmount(amount);
-                    // add to building
-                    selected_building_ptr_->AddToInventory(item.first, item.second);
-                }
-            }
+            TransferInventory();
+            // if (!selected_building_ptr_->CheckItemReqs())
+            //     SetState(WorkerStates::IDLE);
             break;
         case BuildingStatus::CONSTRUCTION:
             // update construction effort
-            building_ptr->effort_val_ += skill_map_[SkillTypes::CONSTRUCTION].CalcEffortUnits();
+            building_ptr->effort_val_ += skill_map_[SkillTypes::CONSTRUCTION]->CalcEffortUnits() * dt;
             break;
-        case BuildingStatus::OPERATING:
-            // add to effort val
-            selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CRAFTING].CalcEffortUnits();
         default:
-            SetState(WorkerStates::CONSTRUCTINGIDLE);
             break;
+    }
+}
+bool Worker::FindCraftBuilding(){
+    if (!AttentionHasBuilding()){
+        // check if we have an attention rect
+        if (AttentionHasRect()){
+            XY<int> center = XY<int>(GetCenter().x_, GetCenter().y_);
+            for (auto coord: GetAttentionRect()->GetCoordsByEuclDist(center)){
+                auto building = nearby_surroundings_->GetBuilding(coord.x_, coord.y_);
+                if (CanCraft(building)){
+                    // set resource to gather
+                    SetAttention(building);
+                    SetGoalToSelectedBuilding();
+                    break;
+                }
+            }
+        }
+
+        if (!AttentionHasBuilding()){
+            return false;
+        }
+    }
+    return true;
+}
+void Worker::CraftingIdle(double dt){
+    if (!AttentionHasBuilding()){
+        SetState(WorkerStates::IDLE);
+        return;
+    }
+    if (selected_building_ptr_->building_status_ == BuildingStatus::READY){
+        TransferInventory();
+    }
+}
+bool Worker::CanCraft(BuildingPtr ptr){
+    // selected building is not null
+    if (ptr == nullptr)
+        return false;
+    // if the building has non-recipe inventory, we're good and can go pick it up
+    if (ptr->GetNonRecipeItems().size() > 0){
+        return true;
+    }
+
+    // if the building's recipe is fulfilled, we're good
+    if (ptr->IsRecipeFulfilled()){
+        return true;
+    }
+
+    // if in READY, I must be able to fulfill the recipe
+    if (ptr->building_status_ == BuildingStatus::READY){
+        // check if selected building has a recipe
+        if (ptr->active_recipe_idx_ != -1){
+            return ptr->GetActiveRecipe()->CanFulfill(&inventory_);
+        } else {
+            return false;
+        }
+    // if in OPERATING, we're good
+    } else if (ptr->building_status_ == BuildingStatus::OPERATING){
+        return true;
+    } else {
+        return false;
     }
 }
 void Worker::Craft(double dt){
+    ExecuteCoreAction(dt, 
+        [this](){return selected_building_ptr_ != nullptr;}, 
+        [this](double dt){CraftCore(dt);}, 
+        [this](){
+            if (!CanCraft(selected_building_ptr_)){
+                SetState(WorkerStates::IDLE);
+                    return false;
+            } else {
+                return true;
+            }
+            });
+}
+void Worker::CraftCore(double dt){
     // craft items
 
-    // TODO: check if worker is close enough to selected_building_ptr_
-
-    // TODO: move worker towards selected_building_ptr_ if not close enough
-    
-    // check if selected building is operating
-    if (selected_building_ptr_->building_status_ != BuildingStatus::OPERATING){
-        // set state to CRAFTINGIDLE
-        SetState(WorkerStates::CRAFTINGIDLE);
-        return;
-    } else {
-        // add to effort val
-        selected_building_ptr_->effort_val_ += skill_map_[SkillTypes::CRAFTING].CalcEffortUnits();
+    // check if must transfer inventory
+    if (selected_building_ptr_->building_status_ == BuildingStatus::READY){
+        TransferInventoryCore();
     }
+    // check if selected building is operating
+    else if (selected_building_ptr_->building_status_ == BuildingStatus::OPERATING){
+        selected_building_ptr_->effort_val_ += dt * skill_map_[SkillTypes::CRAFTING]->CalcEffortUnits();
+    }
+    
+    //
+    TakeNonRecipeInventory(); 
 }
 void Worker::TransferItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr){
+    ExecuteCoreAction(DELTATIME, 
+        [this](){return selected_building_ptr_ != nullptr;}, 
+        [this, item_type, amount_request](double dt){TransferItemCore(item_type, amount_request, selected_building_ptr_);}, 
+        [this, item_type](){
+            if (inventory_.HasNoneOf(item_type)){
+                SetState(WorkerStates::IDLE);
+                return true;
+            } else {
+                return false;
+            }
+        });
+}
+void Worker::TransferItemCore(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr){
     // transfer item to building
+    // if amount_request is negative, assume all
     double amount_to_transfer = 0.0;
     // check if item in inventory
     if (inventory_.find(item_type)){
-        // check if amount in inventory is greater than required
-        amount_to_transfer = std::min(amount_request, inventory_.GetItem(item_type)->GetAmount());
+        if (amount_request < 0.0)
+            amount_to_transfer = inventory_.GetItem(item_type)->GetAmount();
+        else
+            // check if amount in inventory is greater than required
+            amount_to_transfer = std::min(amount_request, inventory_.GetItem(item_type)->GetAmount());
     } else {
         return;
     }
@@ -437,74 +758,137 @@ void Worker::TransferItem(ItemTypes item_type, double amount_request, std::share
     building_ptr->AddToInventory(item_type, amount_to_transfer);
     // remove from inventory
     inventory_.GetItem(item_type)->RemoveAmount(amount_to_transfer);
+    must_update_stats_ = true;
 }
-void Worker::TransferInventory(){
+void Worker::TransferItems(){
+    ExecuteCoreAction(DELTATIME, 
+        [this](){return selected_building_ptr_ != nullptr;}, 
+        [this](double dt){
+            auto ptr = task_ptr_->GetActiveAction();
+            for (auto id: ptr->universal_ids_){
+                TransferItemCore((ItemTypes)id, -1.0, ptr->building_ptr_);
+            }
+        }, 
+        [this](){
+            if (inventory_.HasNoneOf(task_ptr_->GetActiveAction()->universal_ids_)){
+                SetState(WorkerStates::IDLE);
+                return true;
+            } else {
+                return false;
+            }
+        });
+}
+bool Worker::TransferInventory(){
+    ExecuteCoreAction(DELTATIME, 
+        [this](){return selected_building_ptr_ != nullptr;}, 
+        [this](double dt){TransferInventoryCore();}, 
+        [this](){return false;}); // always done
+    return true;
+}
+void Worker::TransferInventoryCore(){
     // Smart transfer inventory to building based on context
     // check if building is nullptr
 
-    if (selected_building_ptr_ == nullptr){
-        return;
-    }
+    if (selected_building_ptr_->building_status_ == BuildingStatus::PRECONSTRUCTION){
+        // transfer required items from inventory to building
+        for (auto& item : selected_building_ptr_->item_reqs_map_){
+            // check if item in inventory
+            if (inventory_.find(item.first)){
+                // amount to transfer
+                auto amount = std::min(item.second, inventory_.GetItem(item.first)->GetAmount());
 
-    // check if selected building has a recipe
-    if (selected_building_ptr_->active_recipe_idx_ != -1){
-        // iterate over inputs
-        for (auto& input : selected_building_ptr_->GetRecipe(selected_building_ptr_->active_recipe_idx_)->inputs_){
-            // transfer item
-            TransferItem(input.first, input.second, selected_building_ptr_);
-        }
-    } else {
-        // iterate over inventory
-        for (auto& item : inventory_.GetItemMap()){
-            // transfer item
-            TransferItem(item.first, item.second->GetAmount(), selected_building_ptr_);
+                // remove from inventory
+                inventory_.GetItem(item.first)->RemoveAmount(amount);
+                // add to building
+                selected_building_ptr_->AddToInventory(item.first, item.second);
+            }
         }
     }
 
-    SetState(WorkerStates::IDLE);
+    if (selected_building_ptr_->building_status_ == BuildingStatus::READY){
+        // check if selected building has a recipe
+        if (selected_building_ptr_->active_recipe_idx_ != -1){
+            // iterate over inputs
+            for (auto& input : selected_building_ptr_->GetRecipe(selected_building_ptr_->active_recipe_idx_)->inputs_){
+                // transfer item
+                TransferItem(input.first, input.second, selected_building_ptr_);
+            }
+        } else {
+            // // iterate over inventory
+            // for (auto& item : inventory_.GetItemMap()){
+            //     // transfer item
+            //     TransferItem(item.first, item.second->GetAmount(), selected_building_ptr_);
+            // }
+        }
+    }
 }
-void Worker::TakeItem(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr){
+bool Worker::CanTakeItems(){
+    // check if I have room in my weight
+    if (stats_map_[WorkerStats::CURRCARRY] >= stats_map_[WorkerStats::MAXCARRY]){
+        return false;
+    }
+    return selected_building_ptr_->inventory_.HasNoneOf(task_ptr_->GetActiveAction()->universal_ids_);
+}
+void Worker::TakeItems(){
+    ExecuteCoreAction(DELTATIME, 
+        [this](){return selected_building_ptr_ != nullptr;}, 
+        [this](double dt){
+            auto ptr = task_ptr_->GetActiveAction();
+            for (auto id: ptr->universal_ids_){
+                TakeItemCore((ItemTypes)id, -1.0, ptr->building_ptr_);
+            }
+        }, 
+        [this](){
+            if (!CanTakeItems()){
+                SetState(WorkerStates::IDLE);
+                return true;
+            } else {
+                return false;
+            }
+        });
+}
+void Worker::TakeItemCore(ItemTypes item_type, double amount_request, std::shared_ptr<Building> building_ptr){
     // transfer item to building
     double amount_to_transfer = 0.0;
     // check if item in building
-    if (building_ptr->inventory_map_.find(item_type) != building_ptr->inventory_map_.end()){
-        // check if amount in building is greater than required
-        amount_to_transfer = std::min(amount_request, building_ptr->inventory_map_[item_type]);
+    if (building_ptr->inventory_.find(item_type)){
+        // get max available
+        if (amount_request < 0.0) {
+            amount_to_transfer = building_ptr->inventory_.GetItem(item_type)->GetAmount();
+        } else {
+            // check if amount in building is greater than required
+            amount_to_transfer = std::min(amount_request, building_ptr->inventory_.GetItem(item_type)->GetAmount());
+        }
+        // calculate max allowable
+        auto max_allowable = (stats_map_[WorkerStats::MAXCARRY] - stats_map_[WorkerStats::CURRCARRY]) / building_ptr->inventory_.GetItem(item_type)->density_;
+        amount_to_transfer = std::min(amount_to_transfer, max_allowable);
     } else {
         return;
     }
     // add to inventory
-    AddToInventory(item_type, amount_to_transfer);
-    // remove from building
-    building_ptr->inventory_map_[item_type] -= amount_to_transfer;
+    if (AddToInventory(item_type, amount_to_transfer))
+        // remove from building
+        building_ptr->inventory_.GetItem(item_type)->RemoveAmount(amount_to_transfer);
 }
-DefaultActionFcn Worker::TakeInventory(){
+void Worker::TakeInventory(){
+    // stub
+}
+void Worker::TakeNonRecipeInventory(){
+    // will only take items if the building is in the ready or operating state
     if (selected_building_ptr_ == nullptr){
-        return 0;
-    }
-    
-    // get items to not transfer from the building's recipe
-    std::vector<ItemTypes> items_to_avoid;
-    if (selected_building_ptr_->active_recipe_idx_ != -1){
-        for (auto& input : selected_building_ptr_->GetRecipe(selected_building_ptr_->active_recipe_idx_)->inputs_){
-            items_to_avoid.push_back(input.first);
-        }
+        return;
     }
 
-    // iterate over inventory
-    for (auto& item : selected_building_ptr_->GetItemMap()){
-        // check if item is in items_to_avoid
-        if (std::find(items_to_avoid.begin(), items_to_avoid.end(), item.first) != items_to_avoid.end()){
-            continue;
-        }
+    // check if selected building is in the ready state
+    if (!(selected_building_ptr_->CheckState(BuildingStatus::READY) || selected_building_ptr_->CheckState(BuildingStatus::OPERATING)))
+        return;
+
+    for (auto& item: selected_building_ptr_->GetNonRecipeItems()){
         // transfer item
-        TakeItem(item.first, item.second, selected_building_ptr_);
+        TakeItemCore(item->item_type_, item->GetAmount(), selected_building_ptr_);
     }
-
-    SetState(WorkerStates::IDLE);
-    return 0;
 }
-DefaultActionFcn Worker::Eat(){
+void Worker::Eat(){
     // iterate over inventory, find first item with item_category_ == ItemCategories::FOOD, then remove it from inventory and increase need value
     for (auto& item : inventory_.GetItemMap()){
         if (item.second->IsItemCategory(ItemCategories::FOOD)){
@@ -514,12 +898,11 @@ DefaultActionFcn Worker::Eat(){
             needs_map_[NeedsTypes::FOOD].val_ += amount_to_eat * food->nutrient_amount_;
             // subtract from inventory
             item.second->RemoveAmount(amount_to_eat);
-            return 0;
+            return;
         }
     }
-    return 0;
 }
-void Worker::InferActionWide(double dt){
+bool Worker::InferActionWide(double dt){
     // infer simple actions based off NearbySurroundings
     
     // buildings have priority 
@@ -527,7 +910,7 @@ void Worker::InferActionWide(double dt){
 	double dist = 99;
 	BuildingPtr new_building_ptr = nullptr;
 
-    for (auto& building : nearby_surroundings_.buildings_){
+    for (auto& building : nearby_surroundings_->buildings_){
         // check if building is ready
         if (building->building_status_ == BuildingStatus::PRECONSTRUCTION || building->building_status_ == BuildingStatus::CONSTRUCTION){
 			// dist
@@ -542,52 +925,219 @@ void Worker::InferActionWide(double dt){
 		// set building to construct
 		selected_building_ptr_ = new_building_ptr;
 		SetState(WorkerStates::INFERRING);
+        return true;
 	}
+    return false;
 }
-void Worker::InferAction(double dt){
+bool Worker::InferAction(double dt){
     // Infer an action based on the attention (selected_building_ptr_)
     if (HasAttention()){
-		// check if close enough for interaction
-		if (eucl_dist<double>(GetCenter(), selected_building_ptr_->center_) < interaction_dist_){
-			SetState(WorkerStates::CONSTRUCTING);
-			Construct(dt);
-		} else {
-			// set goal to selected building
-			SetGoalToSelectedBuilding();
-			SetState(WorkerStates::MOVING);
-		}
+        if (InferAction(dt, selected_building_ptr_)) // building first priority
+            return true;
+        if (InferAction(dt, selected_resource_ptr_)) // resource second priority
+            return true;
 
     } else {
-        InferActionWide(dt);
+        if (InferActionWide(dt))
+            return true;
+    }
+    return false;
+}
+bool Worker::InferAction(double dt, BuildingPtr ptr){
+    if (ptr == nullptr)
+        return false;
+
+    // check if close enough for interaction
+    if (eucl_dist<double>(GetCenter(), selected_building_ptr_->center_) < interaction_dist_){
+        SetState(WorkerStates::CONSTRUCTING);
+        Construct(dt);
+    } else {
+        // set goal to selected building
+        SetGoalToSelectedBuilding();
+        SetState(WorkerStates::MOVING);
+    }
+    return true;
+}
+bool Worker::InferAction(double dt, ResourcePtr ptr){
+    if (ptr == nullptr)
+        return false;
+
+    // see if selected resource is gatherable and has resources
+    if (!CanGather(ptr)){
+        return false;
+    }
+
+    // check if close enough for interaction
+    if (eucl_dist<double>(GetCenter(), ptr->GetCenter()) < interaction_dist_){
+        SetState(WorkerStates::GATHERING);
+        BeginGather(dt);
+    } else {
+        // set goal to selected resource
+        SetGoalToSelectedResource();
+        SetState(WorkerStates::MOVING);
+    }
+    return true;
+}
+bool Worker::IsCloseEnough(GameObjectPtr ptr){
+    // check if close enough to interact with resource
+    if (ptr == nullptr)
+        return false;
+    return eucl_dist<double>(GetCenter(), ptr->GetCenter()) < interaction_dist_;
+
+}
+void Worker::SetTask(TaskPtr task_ptr){
+    // set the task
+    task_ptr_ = task_ptr->copy();
+
+    // hack: for now hard code, in the future abstract it
+    // iterate through actions
+    for (auto& action: task_ptr_->actions_){
+        // switch on action type
+        switch (action->GetActiveActionType()){
+            case ActionTypes::Gather:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetGoalToSelectedResource();
+                    SetState(WorkerStates::GATHERING);
+                    };
+                break;
+            case ActionTypes::GatherArea:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetState(WorkerStates::GATHERIDLE);
+                    };
+                break;
+            case ActionTypes::Construct:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetGoalToSelectedBuilding();
+                    SetState(WorkerStates::CONSTRUCTING);
+                    };
+                break;
+            case ActionTypes::Craft:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetGoalToSelectedBuilding();
+                    SetState(WorkerStates::CRAFTING);
+                    };
+                break;
+            case ActionTypes::TransferItems:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetState(WorkerStates::IDLE);
+                    };
+                break;
+            case ActionTypes::TakeItems:
+                action->on_enter_cb_ = [this](){
+                    SetAttention(task_ptr_);
+                    SetState(WorkerStates::IDLE);
+                    };
+                break;
+
+        }
     }
 }
 void Worker::ExecuteTask(double dt){
     // Execute a task
     // TODO: move this to dynamic object class
-    if (task_ptr_ == nullptr){
-        std::cout << "No active task." << std::endl;
+    if (task_ptr_ == nullptr || task_ptr_->actions_.size() == 0){
+        std::cout << "No active task or no actions in task." << std::endl;
         SetState(WorkerStates::IDLE);
         return;
     }
     
-    ResetDynamicObjectActions();
-            
+    // call the continuous function
     auto action_type = task_ptr_->GetActiveActionType(); // recurse get active action type
     action_primitive_map_[action_type]();
+    // end
 
-    SuccessFcn success_fcn = [this](){
-            if (CheckState(WorkerStates::IDLE)){
-                return true;
-            } else {
-                return false;
+    task_ptr_->update(CheckState(WorkerStates::IDLE)); // recurse update off completion of action
+}
+void Worker::UpdateStats(){
+    // iterate through stats and re-calculate them all
+    // for now, hard code
+    // CURRCARRY
+    stats_map_[WorkerStats::CURRCARRY] = inventory_.CalcTotalMass();
+
+    // MAXCARRY
+    stats_map_[WorkerStats::MAXCARRY] = attribute_map_[WorkerAttributeTypes::STRENGTH].GetVal(); // base value
+    for (auto& item: inventory_.GetItemMap()){
+        // try to cast to ToolType
+        if (item.second->item_category_ == ItemCategories::TOOL){
+            auto tool = std::static_pointer_cast<ToolItem>(item.second);
+            // check if the itemtype is in ITEM_TO_WORKER_ATTRIBUTE_MAP
+            if (ITEM_TO_WORKER_ATTRIBUTE_MAP.find(item.first) != ITEM_TO_WORKER_ATTRIBUTE_MAP.end()){
+                // check if the attribute is STRENGTH
+                if (ITEM_TO_WORKER_ATTRIBUTE_MAP[item.first] == WorkerAttributeTypes::STRENGTH){
+                    // add to maxcarry
+                    stats_map_[WorkerStats::MAXCARRY] += tool->additive_mod_;
+                    stats_map_[WorkerStats::MAXCARRY] *= tool->mult_mod_;
+                }
             }
-        };
-
-    auto is_complete = success_fcn();
-    task_ptr_->update(is_complete); // recurse update off completion of action
-
-    // Revert to executing task. Bit of a hack.
-    SetState(WorkerStates::EXECUTINGTASK);
+        }
+    }
 }
 
+/*
+Actions.
+These are the entry point for actions from tasks. Since they're called within the FSM, they can set the state when complete.
+*/
+void Worker::actionSelectClosestBuilding(){
+    if (SelectClosestBuilding())
+        SetState(WorkerStates::IDLE);
+}
+void Worker::actionMoveTowardsGoal(){
+    if (MoveTowardsGoal()){
+        SetState(WorkerStates::IDLE);
+    }
+}
+void Worker::actionSetGoalToSelectedResource(){
+    SetGoalToSelectedResource();
+    SetState(WorkerStates::IDLE); // auto success
+    }
+void Worker::actionSetGoalToSelectedBuilding(){
+    SetGoalToSelectedBuilding();
+    SetState(WorkerStates::IDLE); // auto success
+}
+void Worker::actionSelectBuilding(){
+    auto ptr = task_ptr_->GetActiveAction();
+    SelectBuilding(ptr->building_ptr_);
+    SetState(WorkerStates::IDLE); // autocomplete
+}
+void Worker::actionSelectResource(){
+    auto ptr = task_ptr_->GetActiveAction();
+    SelectResource(ptr->resource_ptr_);
+    SetState(WorkerStates::IDLE); // autocomplete
+}
+void Worker::actionGather(){
+    Gather(DELTATIME);
+}
+void Worker::actionGatherArea(){
+    GatherArea(DELTATIME);
+}
+void Worker::actionConstruct(){
+    Construct(DELTATIME);
+}
+void Worker::actionTakeInventory(){
+    TakeInventory();
+    SetState(WorkerStates::IDLE);
+}
+void Worker::actionTakeItems(){
+    TakeItems();
+}
+void Worker::actionTransferItems(){
+    TransferItems();
+}
+void Worker::actionTransferInventory(){
+    TransferInventory();
+    SetState(WorkerStates::IDLE);
+}
+void Worker::actionCraft(){
+    Craft(DELTATIME);
+}
+void Worker::actionInfer(){
+    SetAttention(task_ptr_);
+    SetState(WorkerStates::INFERRING);
+    InferAction(DELTATIME);
+}
 /////////////////////////////////////// End Worker ///////////////////////////////////////

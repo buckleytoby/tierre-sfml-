@@ -9,16 +9,18 @@ ButtonPtr MakeButton(double x, double y, std::string str){return std::make_share
 
 
 
-/////////////// End SHortcuts
-Widget::Widget(double x, double y){
+/////////////// End Shortcuts
+Widget::Widget(){
+    id_ = ++id_counter_;
+}
+Widget::Widget(double x, double y): Widget(){
     transform_ = sf::Transform::Identity;
     transform_.translate(x, y);
     bounds_.left = x;
     bounds_.top = y;
     CalculateBounds();
 }
-Widget::Widget(double x, double y, double width, double height){
-    Widget(x, y);
+Widget::Widget(double x, double y, double width, double height): Widget(x, y){
     bounds_.width = width;
     bounds_.height = height;
     CalculateBounds();
@@ -152,6 +154,15 @@ WidgetInputs Widget::HandleInput(sf::Event& event){
                     return WidgetInputs::NONE;
                 }
             }
+        } else if (wasLeftMouseDown(event)){
+            for (auto& child: children_){
+                auto input = child->HandleInput(event); // recursion
+                if (input == WidgetInputs::HANDLED){
+                    return WidgetInputs::HANDLED;
+                }
+            }
+
+            onMouseDown();
         }
     } else {
         return WidgetInputs::NONE;
@@ -159,14 +170,19 @@ WidgetInputs Widget::HandleInput(sf::Event& event){
     return WidgetInputs::NONE;
 }
 bool Widget::onClick(){
-    // debug
-    std::cout << GetID() << " clicked." << std::endl;
     // call the callback
     if (onClick_cb_ == nullptr){
         return false;
     } else {
-        onClick_cb_(); // TODO: force the onClick_cb_ to return a bool for success
-        return true;
+        return onClick_cb_();
+    }
+}
+bool Widget::onMouseDown(){
+    // call the callback
+    if (onMouseDown_cb_ == nullptr){
+        return false;
+    } else {
+        return onMouseDown_cb_();
     }
 }
 bool Widget::onHover(){
@@ -196,4 +212,30 @@ void Widget::AddChild(std::shared_ptr<Widget> child){
         // add a child to the widget
         children_.push_back(child);
     }
+}
+void Widget::RemoveChild(int id){
+    // remove a child from the widget
+    for (auto it = children_.begin(); it != children_.end(); ++it){
+        if ((*it)->GetID() == id){
+            children_.erase(it);
+            return;
+        }
+    }
+}
+void Widget::RemoveChild(std::shared_ptr<Widget> child){
+    // remove a child from the widget
+    if (child == nullptr)
+        return;
+    else
+        RemoveChild(child->GetID());
+}
+std::shared_ptr<Widget> Widget::ReplaceChild(std::shared_ptr<Widget> child, std::shared_ptr<Widget> new_child){
+    // replace a child with another child
+    if (child != nullptr)
+        RemoveChild(child->GetID());
+    if (new_child != nullptr)
+        AddChild(new_child);
+    else
+        return nullptr;
+    return new_child;
 }
