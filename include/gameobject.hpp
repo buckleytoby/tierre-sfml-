@@ -53,7 +53,7 @@ class GameObject: public Interactive
         void MoveY(double dy){bounds_m_.y += dy;}
 
         // virtuals
-        virtual void selfUpdate(double dt);
+        virtual void onUpdate(double dt);
 };
 typedef std::shared_ptr<GameObject> GameObjectPtr;
 

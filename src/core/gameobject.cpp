@@ -19,12 +19,12 @@ void GameObject::LoadArt(std::string name){
 // update
 void GameObject::Update(double dt)
 {
-    // call the virtual self update
-    selfUpdate(dt);
+    // call the virtual onUpdate fcn
+    onUpdate(dt);
 }
 
 // virtuals
-void GameObject::selfUpdate(double dt)
+void GameObject::onUpdate(double dt)
 {
     // virtual
 }

@@ -2,6 +2,7 @@
 #include "gamescreen.hpp"
 #include "gui.hpp"
 #include "handleinput.hpp"
+#include "worker.hpp"
 
 using namespace HandleInputNS;
 HandleInput::HandleInput(){
@@ -263,7 +264,10 @@ HandleInputNS::InputResult Map::onHandleInput(sf::Event& event){
     auto done = HandleInputNS::InputResult::NOTHANDLED;
     for (auto& dynamic_object_ptr : selected_dynamic_object_ptrs_){
         if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+            // cast to worker
             auto worker = std::dynamic_pointer_cast<Worker>(dynamic_object_ptr);
+
+            // try to handle event and see if it was handled
             if (worker->HandleInput(event) >= HandleInputNS::InputResult::HANDLED)
                 done = HandleInputNS::InputResult::HANDLED;
         }
@@ -278,17 +282,17 @@ HandleInputNS::InputResult Worker::onHandleInput(sf::Event& event){
             switch (event.key.scancode){
                 case sf::Keyboard::Scan::G:
                     std::cout << "Toggle gathering" << std::endl;
-                    SetState(WorkerStates::GATHERIDLE);
+                    SetDesiredState(WorkerStates::GATHERIDLE);
                     return HandleInputNS::InputResult::HANDLED;
                     break;
                 case sf::Keyboard::Scan::C:
                     std::cout << "Toggle constructing" << std::endl;
-                    SetState(WorkerStates::CONSTRUCTINGIDLE);
+                    SetDesiredState(WorkerStates::CONSTRUCTINGIDLE);
                     return HandleInputNS::InputResult::HANDLED;
                     break;
                 case sf::Keyboard::Scan::R:
                     std::cout << "Toggle crafting" << std::endl;
-                    SetState(WorkerStates::CRAFTINGIDLE);
+                    SetDesiredState(WorkerStates::CRAFTINGIDLE);
                     return HandleInputNS::InputResult::HANDLED;
                     break;
                 case sf::Keyboard::Scan::T:
@@ -298,7 +302,7 @@ HandleInputNS::InputResult Worker::onHandleInput(sf::Event& event){
                     break;
                 case sf::Keyboard::Scan::E:
                     std::cout << "Start executing task" << std::endl;
-                    SetState(WorkerStates::EXECUTINGTASK);
+                    SetDesiredState(WorkerStates::EXECUTINGTASK);
                     return HandleInputNS::InputResult::HANDLED;
                     break;
                 default:

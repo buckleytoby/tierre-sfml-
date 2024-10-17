@@ -166,13 +166,16 @@ void Map::update(double dt){
         }
     }
 
-    // update dynamic objects
+    // iterate through dynamic objects
     for (auto& dynamic_object_ptr : dynamic_object_ptrs_){
+        // update dynamic objects
         dynamic_object_ptr->Update(dt);
 
         // if worker
         if (dynamic_object_ptr->dynamic_object_type_ == DynamicObjectTypes::WORKER){
+            // cast to worker
             auto worker = std::static_pointer_cast<Worker>(dynamic_object_ptr);
+
             // update senses
             auto resources = GetResourceSlice(worker->GetImmediateSurroundingsRect());
             auto buildings = GetBuildingSlice(worker->GetImmediateSurroundingsRect());
@@ -319,9 +322,12 @@ void Map::SetAttention(DynamicObjectPtr ptr, double x, double y){
     // set selected tile ptr
     ptr->SetAttention(tile);
 
-    if (tile->HasBuildingPtr()){
+    if (tile->HasBuildingPtr())
+    {
         ptr->SetAttention(tile->GetBuildingPtr());
-    } else if (tile->HasResource()){
+    } 
+    else if (tile->HasResource())
+    {
         ptr->SetAttention(tile->GetResource());
     }
 }
@@ -513,7 +519,15 @@ void Map::InferAction(){
     if (task_manager_ptr_->in_easy_edit_mode_){
         // SetOnSelectToAddAction(); // right now this is done in the task manager handle input fcn
     } else {
-        SetAttentionAndMove(mouse_x_, mouse_y_);
+        // SetAttentionAndMove(mouse_x_, mouse_y_);
+        for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_)
+        {
+            InferAction(dynamic_object_ptr, mouse_x_, mouse_y_);
+        }
     }
+}
+void Map::InferAction(DynamicObjectPtr ptr, double x, double y){
+    SetAttention(ptr, x, y); // gives this dynamic object a reference to the tile at that location
+    ptr->InferAction();
 }
     /////////////////////////////////////// End Map ///////////////////////////////////////

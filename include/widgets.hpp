@@ -15,6 +15,7 @@
 #include "recipes.hpp"
 #include "buildings.hpp"
 #include "dynamic_objects.hpp"
+#include "worker.hpp"
 
 // forward declarations
 class Worker; typedef std::shared_ptr<Worker> WorkerPtr;

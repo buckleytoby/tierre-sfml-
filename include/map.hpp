@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include "dynamic_objects.hpp"
+#include "worker.hpp"
 #include "mapgen.hpp"
 #include "utils.hpp"
 #include "interactive.hpp"
@@ -124,6 +125,7 @@ class Map: public Interactive
         std::shared_ptr<Rect<double>> GetSelectRect();
 
         void InferAction();
+        void InferAction(DynamicObjectPtr ptr, double x, double y);
 };
 typedef std::shared_ptr<Map> MapPtr;
 

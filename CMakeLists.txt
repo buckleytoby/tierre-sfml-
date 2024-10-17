@@ -14,6 +14,7 @@ include_directories(include)
 
 ### widget source files
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/core/*.cpp)
+file(GLOB DYNAMIC_OBJECT_FILES ${PROJECT_SOURCE_DIR}/src/dynamic_objects/*.cpp)
 file(GLOB WIDGET_FILES ${PROJECT_SOURCE_DIR}/src/widgets/*.cpp)
 file(GLOB SCRIPTING_FILES ${PROJECT_SOURCE_DIR}/src/scripting/*.cpp)
 message(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
@@ -23,6 +24,7 @@ message(SCRIPTING_FILES="${SCRIPTING_FILES}")
 
 add_executable(CMakeSFMLProject 
     ${SRC_FILES}
+    ${DYNAMIC_OBJECT_FILES}
     ${WIDGET_FILES}
     ${SCRIPTING_FILES}
     )

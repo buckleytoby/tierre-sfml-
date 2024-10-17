@@ -42,7 +42,7 @@ void Widget::Update(double dt, double x, double y){
         }
     }
 
-    // call the self update
+    // call the onUpdate fcn
     onUpdate(dt, x, y);
 
     // update the children

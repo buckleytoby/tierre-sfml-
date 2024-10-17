@@ -77,8 +77,11 @@ class DynamicObject: public GameObject
         DynamicObject(std::string name);
 
         // virtual functions
-        virtual void selfUpdate(double dt);
+        virtual void onUpdate(double dt);
         virtual void AI(double dt){};
+        virtual bool InferAction(){return false;}
+
+        void Move(double dt);
 
         void SetSpeed(double speed);
         void SetDynamicObjectType(DynamicObjectTypes dynamic_object_type){dynamic_object_type_ = dynamic_object_type;}
@@ -125,6 +128,7 @@ enum class WorkerInputs
     HANDLED,
 };
 enum class WorkerStates{
+    UNDEFINED, // used for comparisons
     DEAD,
     IDLE,
     INFERRING,
@@ -220,6 +224,7 @@ class Worker : public DynamicObject
     public:
         WorkerStates worker_state_{WorkerStates::IDLE};
         WorkerStates task_worker_state_{WorkerStates::IDLE};
+        WorkerStates desired_state_{WorkerStates::UNDEFINED};
         Inventory inventory_;
         std::map<SkillTypes, SkillPtr> skill_map_;
         std::map<NeedsTypes, Need> needs_map_;
@@ -236,7 +241,7 @@ class Worker : public DynamicObject
         
         // Core Methods
         Worker();
-        void selfUpdate(double dt);
+        void onUpdate(double dt);
         virtual HandleInputNS::InputResult onHandleInput(sf::Event& event);
         void AI(double dt);
         void Reset();
@@ -246,9 +251,13 @@ class Worker : public DynamicObject
         Rect<double> GetImmediateSurroundingsRect();
         Rect<double> GetNearbySurroundingsRect();
         void Die();
+        bool InstantUpdate();
+        bool TemporalUpdate(double dt);
         bool CheckState(WorkerStates worker_state);
         void UpdateStats();
         bool CanGather(ResourcePtr ptr);
+        bool CanGather();
+        bool CanGatherNow();
         bool InventoryHasRoom(ResourcePtr ptr);
 
         // Virtuals
@@ -307,6 +316,7 @@ class Worker : public DynamicObject
 
         // Action Inference
         bool InferActionWide(double dt);
+        bool InferAction();
         bool InferAction(double dt);
         bool InferAction(double dt, BuildingPtr ptr);
         bool InferAction(double dt, ResourcePtr ptr);
@@ -342,6 +352,16 @@ class Worker : public DynamicObject
         TaskPtr task_ptr_{nullptr};
         void SetTask(TaskPtr ptr);
         void ExecuteTask(double dt);
+
+        void SetDesiredState(WorkerStates state)
+        {
+            desired_state_ = state;
+        }
+        void ResetDesiredState()
+        {
+            desired_state_ = WorkerStates::UNDEFINED;
+        }
+
 
 };
 typedef std::shared_ptr<Worker> WorkerPtr;

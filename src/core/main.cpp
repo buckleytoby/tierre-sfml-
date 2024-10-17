@@ -15,8 +15,8 @@ int FRAMERATE = 30;
 double TIME_MULTIPLIER = 1.0;
 double DELTATIME = TIME_MULTIPLIER / (double) FRAMERATE; // tie physics to framerate
 int PIXELS_PER_METER = 100;
-unsigned int SCREENWIDTH = 2000;
-unsigned int SCREENHEIGHT = 1000;
+unsigned int SCREENWIDTH = 1600;
+unsigned int SCREENHEIGHT = 800;
 double PIXELS_PER_METER_X = 0;
 double PIXELS_PER_METER_Y = 0;
 double VIEWPORT_X = 0;
@@ -62,6 +62,7 @@ int main()
     // set the active gamescreen
     auto activeGamescreen = gamescreen_map[gamescreenState];
 
+    // construct inline function for handling program-level inputs
     auto handleinputFCN = [&window, &gamescreenState, &gamescreen_map, &activeGamescreen](sf::Event& event){
         switch (event.type){
             case sf::Event::Closed:
@@ -86,12 +87,13 @@ int main()
     auto interactive_mgr = Interactive(handleinputFCN);
     interactive_mgr.SetHandleInputOverride(true);
 
+    // MAIN GAME LOOP
     while (window.isOpen()){
 
         // loop through events
         for (auto event = sf::Event{}; window.pollEvent(event);){
 
-            // main-level events
+            // program-level events
             if (interactive_mgr.HandleInput(event) >= HandleInputNS::InputResult::HANDLED)
                 continue;
             
