@@ -7,6 +7,7 @@
 #include <memory>
 #include <map>
 #include <functional>
+#include <queue>
 
 #include "resources.hpp"
 #include "skills.hpp"
@@ -80,6 +81,7 @@ class DynamicObject: public GameObject
         virtual void onUpdate(double dt);
         virtual void AI(double dt){};
         virtual bool InferAction(){return false;}
+        virtual bool InferAction(bool append_action){return false;}
 
         void Move(double dt);
 
@@ -224,7 +226,7 @@ class Worker : public DynamicObject
     public:
         WorkerStates worker_state_{WorkerStates::IDLE};
         WorkerStates task_worker_state_{WorkerStates::IDLE};
-        WorkerStates desired_state_{WorkerStates::UNDEFINED};
+        std::queue<WorkerStates> desired_states_;
         Inventory inventory_;
         std::map<SkillTypes, SkillPtr> skill_map_;
         std::map<NeedsTypes, Need> needs_map_;
@@ -316,6 +318,8 @@ class Worker : public DynamicObject
 
         // Action Inference
         bool InferActionWide(double dt);
+        void SetDesiredState(WorkerStates state);
+        bool InferAction(bool append_action);
         bool InferAction();
         bool InferAction(double dt);
         bool InferAction(double dt, BuildingPtr ptr);
@@ -353,13 +357,13 @@ class Worker : public DynamicObject
         void SetTask(TaskPtr ptr);
         void ExecuteTask(double dt);
 
-        void SetDesiredState(WorkerStates state)
-        {
-            desired_state_ = state;
-        }
         void ResetDesiredState()
         {
-            desired_state_ = WorkerStates::UNDEFINED;
+            desired_states_ = {};
+        }
+        void AddDesiredState(WorkerStates state)
+        {
+            desired_states_.push(state);
         }
 
 

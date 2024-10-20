@@ -228,10 +228,30 @@ HandleInputNS::InputResult Map::onHandleInput(sf::Event& event){
                     MakeWorker(mouse_x_, mouse_y_);
                     return HandleInputNS::InputResult::HANDLED;
                     break;}
+                case sf::Keyboard::Scan::LShift:
+                {
+                    // exit append actions mode
+                    b_append_actions = false;
+                    return HandleInputNS::InputResult::HANDLED;
+                    break;
+                }
                 default:
                     break;
             }
             break;
+        case sf::Event::KeyPressed:
+        {
+            switch (event.key.scancode){
+                case sf::Keyboard::Scan::LShift:
+                {
+                    // enter append actions mode
+                    b_append_actions = true;
+                    return HandleInputNS::InputResult::HANDLED;
+                    break;
+                }
+            }
+            break;
+        }
         case sf::Event::MouseButtonPressed:
             if (event.mouseButton.button == sf::Mouse::Left){
                 std::cout << "Left mouse button pressed" << std::endl;

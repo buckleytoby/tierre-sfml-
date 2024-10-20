@@ -520,14 +520,20 @@ void Map::InferAction(){
         // SetOnSelectToAddAction(); // right now this is done in the task manager handle input fcn
     } else {
         // SetAttentionAndMove(mouse_x_, mouse_y_);
+
+        // loop through each selected dynamic object
         for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_)
         {
+            // infer action for each dynamic object
             InferAction(dynamic_object_ptr, mouse_x_, mouse_y_);
         }
     }
 }
 void Map::InferAction(DynamicObjectPtr ptr, double x, double y){
-    SetAttention(ptr, x, y); // gives this dynamic object a reference to the tile at that location
-    ptr->InferAction();
+    // gives this dynamic object a reference to the tile at that location
+    SetAttention(ptr, x, y); 
+
+    // now, we can infer action
+    ptr->InferAction(b_append_actions);
 }
     /////////////////////////////////////// End Map ///////////////////////////////////////

@@ -101,25 +101,49 @@ bool Worker::InstantUpdate()
 
     //// process "thoughts" queue
     // process desired state
-    if (desired_state_ != WorkerStates::UNDEFINED)
+    if (!desired_states_.empty())
     {
-        // PoC, hard code gather rn
-        // check if we're allowed to transition
-        if (CanGatherNow())
+        // whether to pop the next desired state
+        bool can_pop = false;
+
+        //// PoC, hard coded for now
+        switch (desired_states_.front())
+        {
+            case (WorkerStates::MOVING):
+            {
+                // if we want to move, then pop
+                can_pop = true;
+                break;
+            }
+
+            case (WorkerStates::GATHERING):
+            {
+                // check if we're allowed to transition
+                if (CanGatherNow())
+                {
+                    can_pop = true;
+                }
+                // else, move towards attention without reseting desired state
+                else
+                {
+                    // set goal to selected resource
+                    SetGoalToSelectedResource(); // TODO: change to SetGoalToAttention
+                    SetState(WorkerStates::MOVING);
+                }
+                break;
+            }
+        }
+
+        // if we can pop, then set the state
+        if (can_pop)
         {
             // set state
-            SetState(desired_state_);
+            SetState(desired_states_.front());
 
-            // if successful, reset desired state
-            ResetDesiredState();
+            // remove front state
+            desired_states_.pop();
         }
-        // else, move towards attention without reseting desired state
-        else
-        {
-            // set goal to selected resource
-            SetGoalToSelectedResource(); // TODO: change to SetGoalToAttention
-            SetState(WorkerStates::MOVING);
-        }
+
     }
 
     return true;
@@ -842,23 +866,59 @@ bool Worker::InferActionWide(double dt){
     return false;
 }
 
+void Worker::SetDesiredState(WorkerStates state)
+{
+    // reset
+    ResetDesiredState();
+
+    // add
+    AddDesiredState(state);
+}
+
 /// @brief Infer action
 /// @return 
-bool Worker::InferAction()
+bool Worker::InferAction(bool append_action)
 {
+    auto state = WorkerStates::UNDEFINED;
+
     if (HasAttention())
     {
-        // collect resource
+        // default, move
+        state = WorkerStates::MOVING;
+
+        // gather resource
         if (CanGather())
         {
-            SetDesiredState(WorkerStates::GATHERING);
-
-            return true;
+            state = WorkerStates::GATHERING;
         }
     }
     
+    // if we've set a state
+    if (state != WorkerStates::UNDEFINED)
+    {
+        // check if we're appending or setting
+        if (append_action)
+        {
+            // append state
+            AddDesiredState(state);
+        }
+        else
+        {
+            // set state
+            SetDesiredState(state);
+        }
+
+        // successfully set
+        return true;
+    }
+
     // default return
     return false;
+}
+bool Worker::InferAction()
+{
+    // by default set, not append actions
+    return InferAction(false);
 }
 
 bool Worker::InferAction(double dt){

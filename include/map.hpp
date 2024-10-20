@@ -41,12 +41,15 @@ enum class MapActions
 class Map: public Interactive
 {
     public:
-        int width_, height_; // in meters
-        double mouse_x_{0}, mouse_y_{0}; // in meters
+        int width_;
+        int height_; // in meters
+        double mouse_x_{0};
+        double mouse_y_{0}; // in meters
         std::vector<std::vector<std::shared_ptr<Tile>>> tiles_array_;
         std::vector<std::shared_ptr<DynamicObject>> dynamic_object_ptrs_;
         std::vector<DynamicObjectPtr> selected_dynamic_object_ptrs_;
         std::shared_ptr<Tile> selected_tile_ptr_;
+        bool b_append_actions;
 
         // task mgr ref
         TaskManagerPtr task_manager_ptr_;
