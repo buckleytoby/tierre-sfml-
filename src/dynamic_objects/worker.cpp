@@ -73,7 +73,63 @@ Worker::Worker(): DynamicObject("worker"){
         skill_map_[SkillTypes::GATHERING]->SetLevel(100.0);
         skill_map_[SkillTypes::CRAFTING]->SetLevel(100.0);
     }
+
+    // set state callback map
+    m_state_callback_map[WorkerStates::DEAD] = [](double dt){return true;}; // do nothing, it's dead. Shouldn't ever get here though.
+    m_state_callback_map[WorkerStates::IDLE] = [this](double dt){return IdleCB(dt);};
+    m_state_callback_map[WorkerStates::INFERRING] = [this](double dt){return InferAction(dt);};
+    m_state_callback_map[WorkerStates::EXECUTINGTASK] = [this](double dt){return ExecutingTaskCB(dt);};
+    m_state_callback_map[WorkerStates::MOVING] = [this](double dt){return MovingCB(dt);};
+    m_state_callback_map[WorkerStates::GATHERIDLE] = [this](double dt){return GatherCB(dt);};
+    m_state_callback_map[WorkerStates::GATHERING] = [this](double dt){return GatherCB(dt);};
+    m_state_callback_map[WorkerStates::CONSTRUCTINGIDLE] = [this](double dt){return ConstructingCB(dt);};
+    m_state_callback_map[WorkerStates::CONSTRUCTING] = [this](double dt){return ConstructingCB(dt);};
+    m_state_callback_map[WorkerStates::CRAFTINGIDLE] = [this](double dt){return CraftingIdleCB(dt);};
+    m_state_callback_map[WorkerStates::CRAFTING] = [this](double dt){return CraftingCB(dt);};
 }
+
+bool Worker::ExecutingTaskCB(double dt)
+{
+    ExecuteTask(dt);
+
+    return true;
+}
+
+bool Worker::MovingCB(double dt)
+{
+    actionMoveTowardsGoal();
+
+    return true;
+}
+
+bool Worker::GatherCB(double dt)
+{
+    Gather(dt);
+
+    return true;
+}
+
+bool Worker::ConstructingCB(double dt)
+{
+    Construct(dt);
+
+    return true;
+}
+
+bool Worker::CraftingIdleCB(double dt)
+{
+    CraftingIdle(dt);
+
+    return true;
+}
+
+bool Worker::CraftingCB(double dt)
+{
+    Craft(dt);
+
+    return true;
+}
+
 bool Worker::CheckState(WorkerStates state){
     // two modes, either executing task or not
     if (worker_state_ == WorkerStates::EXECUTINGTASK){
@@ -149,12 +205,8 @@ bool Worker::InstantUpdate()
     return true;
 }
 
-bool Worker::TemporalUpdate(double dt)
+bool Worker::UpdateNeeds(double dt)
 {
-    // update the worker (this is where movement actually happens)
-    // call the inherited update
-    inherited::onUpdate(dt);
-
     // update needs
     for (auto& need : needs_map_){
         need.second.update(dt);
@@ -168,6 +220,18 @@ bool Worker::TemporalUpdate(double dt)
                 }
         }
     }
+
+    return true;
+}
+
+bool Worker::TemporalUpdate(double dt)
+{
+    // update the worker (this is where movement actually happens)
+    // call the inherited update
+    inherited::onUpdate(dt);
+
+    // update our needs
+    UpdateNeeds(dt);
 
     // check triggers
     if (must_update_stats_){
@@ -200,6 +264,7 @@ void Worker::AI(double dt){
             // TODO
         }
     }
+
     // next check if any needs are auto-fulfillable
     for (auto& need : needs_map_){
         if (need.second.IsAutoFulfillable()){
@@ -218,55 +283,18 @@ void Worker::AI(double dt){
     }
 
     // clear actions
-	// search terms: fsm, finite state machine
     ResetDynamicObjectActions(); // here?
-    switch (worker_state_){
-        case WorkerStates::DEAD:
-            // do nothing, it's dead. Shouldn't ever get here though.
-            break;
-        case WorkerStates::IDLE:
-            // Reset stuff, then begin to infer the next action
-            if (infer_actions_ && !InferAction(dt))
-                // no actions to infer from current attention
-                ClearAttention();
-            else
-                ClearAttention();
-            break;
-		case WorkerStates::INFERRING:
-			InferAction(dt);
-			break;
-        case WorkerStates::EXECUTINGTASK:
-            ExecuteTask(dt);
-            break;
-        case WorkerStates::MOVING:
-            // move towards goal
-            actionMoveTowardsGoal();
-            break;
-        case WorkerStates::GATHERIDLE:
-            // gather resources
-            Gather(dt);
-            break;
-        case WorkerStates::GATHERING:
-            // gather resources
-            Gather(dt);
-            break;
-        case WorkerStates::CONSTRUCTINGIDLE:
-            // construct buildings
-            Construct(dt);
-            break;
-        case WorkerStates::CONSTRUCTING:
-            // constructing
-            Construct(dt);
-            break;
-        case WorkerStates::CRAFTINGIDLE:
-            // crafting
-            CraftingIdle(dt);
-            break;
-        case WorkerStates::CRAFTING:
-            // crafting
-            Craft(dt);
-            break;
-    }
+    
+    // Call the current state callback
+    m_state_callback_map[worker_state_](dt);
+
+    // Update our Plan
+    /*
+    update
+    update
+    update
+    */
+
 }
 void Worker::Reset(){
 	ResetDynamicObjectActions();
@@ -1071,6 +1099,18 @@ void Worker::UpdateStats(){
             }
         }
     }
+}
+
+bool Worker::IdleCB(double dt)
+{
+    // Reset stuff, then begin to infer the next action
+    if (infer_actions_ && !InferAction(dt))
+        // no actions to infer from current attention
+        ClearAttention();
+    else
+        ClearAttention();
+
+    return true;
 }
 
 /*

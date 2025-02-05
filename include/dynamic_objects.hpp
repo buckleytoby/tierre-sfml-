@@ -232,6 +232,7 @@ class Worker : public DynamicObject
         std::map<NeedsTypes, Need> needs_map_;
         std::map<WorkerAttributeTypes, Attribute> attribute_map_;
         std::map<WorkerStats, double> stats_map_;
+        std::map<WorkerStates, std::function<bool(double)>> m_state_callback_map;
 
         // vars
         bool is_male_;
@@ -243,6 +244,12 @@ class Worker : public DynamicObject
         
         // Core Methods
         Worker();
+        bool ExecutingTaskCB(double dt);
+        bool MovingCB(double dt);
+        bool GatherCB(double dt);
+        bool ConstructingCB(double dt);
+        bool CraftingIdleCB(double dt);
+        bool CraftingCB(double dt);
         void onUpdate(double dt);
         virtual HandleInputNS::InputResult onHandleInput(sf::Event& event);
         void AI(double dt);
@@ -254,9 +261,11 @@ class Worker : public DynamicObject
         Rect<double> GetNearbySurroundingsRect();
         void Die();
         bool InstantUpdate();
+        bool UpdateNeeds(double dt);
         bool TemporalUpdate(double dt);
         bool CheckState(WorkerStates worker_state);
         void UpdateStats();
+        bool IdleCB(double dt);
         bool CanGather(ResourcePtr ptr);
         bool CanGather();
         bool CanGatherNow();
