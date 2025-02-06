@@ -141,27 +141,42 @@ void DynamicObject::SetAttention(TilePtr tile_ptr){
         selected_gameobject_ = tile_ptr;
     }
 }
+
+void DynamicObject::SetGoal(GameObjectPtr game_object){
+    if (game_object == nullptr){
+        return;
+    }
+    auto center = game_object->GetCenter();
+
+    SetGoal(center.x_, center.y_);
+}
+
 void DynamicObject::SetGoalToSelectedGameObject(){
     if (selected_gameobject_ == nullptr){
         return;
     }
-    goal_.x_ = selected_gameobject_->GetCenter().x_;
-    goal_.y_ = selected_gameobject_->GetCenter().y_;
+    SetGoal(selected_gameobject_);
 }
+
 void DynamicObject::SetGoalToSelectedBuilding(){
     // set the goal to the selected building
     if (selected_building_ptr_ == nullptr){
         return;
     }
-    goal_.x_ = selected_building_ptr_->center_.x_;
-    goal_.y_ = selected_building_ptr_->center_.y_;
+    SetGoal(selected_building_ptr_);
 }
+
 void DynamicObject::SetGoalToSelectedResource(){
     // set the goal to the selected resource
     if (selected_resource_ptr_ == nullptr){
         return;
     }
-    goal_.x_ = selected_resource_ptr_->GetCenter().x_;
-    goal_.y_ = selected_resource_ptr_->GetCenter().y_;
+    SetGoal(selected_resource_ptr_);
+}
+
+void DynamicObject::SetGoal(double x, double y){
+    // set the goal for the worker
+    goal_.x_ = x;
+    goal_.y_ = y;
 }
 /////////////////////////////////////// End DynamicObject ///////////////////////////////////////

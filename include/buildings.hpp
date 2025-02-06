@@ -13,6 +13,7 @@ enum class BuildingTypes {
     STORAGESPACE, // simplest storage
     CHEST,
     FARM,
+    WALL,
 };
 const std::string to_string(BuildingTypes p);
 extern std::vector<BuildingTypes> BUILDINGTYPES;
@@ -81,6 +82,8 @@ class Building: public GameObject
 
         // state cbs
         void Operating();
+
+        bool Preconstruction(double dt);
 
         // checkers
         bool CanConstruct();
@@ -152,6 +155,7 @@ class Farm : public Building
         sf::Texture texture_;
         sf::Sprite sprite_;
         
+        // Constructor
         Farm(): Building("Farm"){
             SetRecipes({std::make_shared<FarmCorn>()});
             building_type_ = BuildingTypes::FARM;
@@ -165,6 +169,33 @@ class Farm : public Building
         virtual sf::Sprite& GetSprite(){return sprite_;}
         virtual std::string to_string(){return std::string("Farm");}
 };
+
+class Wall: public Building
+{
+    public:
+        sf::Texture texture_;
+        sf::Sprite sprite_;
+        
+        // Constructor
+        Wall(): Building("Wall"){
+            building_type_ = BuildingTypes::FARM;
+            building_status_ = BuildingStatus::PRECONSTRUCTION;
+            // level_ = 0;
+            construction_effort_req_ = DEBUG? 1.0: 30.0;
+            LoadArt();
+
+            // build requirements
+            item_reqs_map_[ItemTypes::LUMBER] = 1.0;
+        }
+        virtual void LoadArt()
+        {
+            texture_.loadFromFile("../../../assets/wall.png");
+            sprite_.setTexture(texture_);
+        }
+        virtual sf::Sprite& GetSprite(){return sprite_;}
+        virtual std::string to_string(){return std::string("Wall");}
+};
+
 
 class BuildingFactory
 {
@@ -180,6 +211,9 @@ class BuildingFactory
                     break;
                 case BuildingTypes::FARM:
                     return std::make_shared<Farm>();
+                    break;
+                case BuildingTypes::WALL:
+                    return std::make_shared<Wall>();
                     break;
                 default:
                     return std::make_shared<Building>("default");

@@ -74,6 +74,29 @@ void Building::Operating(){
     }
 }
 
+bool Building::Preconstruction(double dt)
+{
+    auto all_reqs_fulfilled = CheckItemReqs();
+
+    if (all_reqs_fulfilled)
+    {
+        // consume the required items and remove them from my inventory
+        for (auto &item : item_reqs_map_)
+        {
+            //
+            auto reqd_amount = item.second;
+
+            // remove from inventory
+            inventory_.RemoveFrom(item.first, reqd_amount);
+        }
+        // set building status to construction
+        building_status_ = BuildingStatus::CONSTRUCTION;
+    }
+
+    // done
+    return true;
+}
+
 /////////////////////////////////////// Building ///////////////////////////////////////
 void Building::update(double dt){
     // update the building
@@ -81,18 +104,7 @@ void Building::update(double dt){
     // fsm, finite state machine
     switch (building_status_){
         case BuildingStatus::PRECONSTRUCTION:{
-            auto all_reqs_fulfilled = CheckItemReqs();
-            
-            if (all_reqs_fulfilled){
-                // remote required items from inventory
-                for (auto& item : item_reqs_map_){
-                    double reqd_amount = item.second;
-                    // remove from inventory
-                    AddToInventory(item.first, -reqd_amount);
-                }
-                // set building status to construction
-                building_status_ = BuildingStatus::CONSTRUCTION;
-            }
+            Preconstruction(dt);
             break;}
         case BuildingStatus::CONSTRUCTION:
             // check if construction effort is greater than construction time
@@ -129,7 +141,7 @@ void Building::update(double dt){
 void Building::AddToInventory(ItemTypes item_type, double yield){
     // add to the storage
     // check if item_type in inventory_map_
-    inventory_.AddToInventory(item_type, yield);
+    inventory_.AddTo(item_type, yield);
 }
 RecipePtr Building::GetActiveRecipe(){
     if (active_recipe_idx_ == -1){
@@ -166,12 +178,19 @@ void Building::Draw(sf::RenderTarget& target, double pixelX, double pixelY, doub
     // draw
     target.draw(sprite);
 }
-bool Building::CheckItemReqs(){ // for construction
+
+/// @brief For construction
+/// @return 
+bool Building::CheckItemReqs(){
+    // local vars
+    bool all_reqs_fulfilled = true; // default true in case item_reqs_map_ is empty
+    
     // iterate through item_reqs_map_
-    bool all_reqs_fulfilled = true;
     for (auto& item: item_reqs_map_){
+        //
         double reqd_amount = item.second;
-        // check if item in inventory
+
+        // check if item is in my inventory
         if (inventory_.find(item.first)){
             // check if amount in inventory is greater than required
             if (inventory_.GetItem(item.first)->GetAmount() < reqd_amount){

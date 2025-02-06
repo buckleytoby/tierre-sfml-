@@ -194,14 +194,14 @@ class Inventory
         //         inventory_map_[itemType] = ItemFactory::MakeItemYield(itemType, (yield_kg)yield);
         //     }
         // }
-        void AddToInventory(ItemTypes itemType, double amount){
+        void AddTo(ItemTypes itemType, double amount){
             if (find(itemType)){
                 GetItem(itemType)->AddAmount((amount_units)amount);
             } else {
                 inventory_map_[itemType] = ItemFactory::MakeItem(itemType, (amount_units)amount);
             }
         }
-        void RemoveFromInventory(ItemTypes itemType);
+        void RemoveFrom(ItemTypes itemType, double amount){AddTo(itemType, -amount);}
         double CalcTotalMass();
 
         bool HasNoneOf(ItemTypes item);

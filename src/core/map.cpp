@@ -322,10 +322,13 @@ void Map::SetAttention(DynamicObjectPtr ptr, double x, double y){
     // set selected tile ptr
     ptr->SetAttention(tile);
 
+    // first priority goes to the building on the tile
     if (tile->HasBuildingPtr())
     {
         ptr->SetAttention(tile->GetBuildingPtr());
     } 
+
+    // second priority is the resource on the tile
     else if (tile->HasResource())
     {
         ptr->SetAttention(tile->GetResource());
@@ -515,10 +518,32 @@ std::shared_ptr<Rect<double>> Map::GetSelectRect(){
 
     return std::make_shared<Rect<double>>(x, y, width, height);
 }
+
+bool Map::Atleast1WorkerSelected()
+{
+    bool out = false;
+
+    for (auto &dynamic_object_ptr : selected_dynamic_object_ptrs_)
+    {
+        if (dynamic_object_ptr->IsType(DynamicObjectTypes::WORKER))
+        {
+            out = true;
+            break;
+        }
+    }
+
+    return out;
+}
+
 void Map::InferAction(){
     if (task_manager_ptr_->in_easy_edit_mode_){
         // SetOnSelectToAddAction(); // right now this is done in the task manager handle input fcn
-    } else {
+    }
+ 
+    // interaction when at least 1 worker is selected. In this case we want worker to interact with the selected tile
+    else if (Atleast1WorkerSelected())
+    {
+
         // SetAttentionAndMove(mouse_x_, mouse_y_);
 
         // loop through each selected dynamic object

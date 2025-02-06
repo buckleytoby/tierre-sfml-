@@ -301,11 +301,6 @@ void Worker::Reset(){
 	ClearAttention();
 	SetState(WorkerStates::IDLE);
 }
-void Worker::SetGoal(double x, double y){
-    // set the goal for the worker
-    goal_.x_ = x;
-    goal_.y_ = y;
-}
 Rect<double> Worker::GetImmediateSurroundingsRect(){
     // get the immediate surroundings rect
     auto local_rect = immediate_surroundings_->GetLocalRect();
@@ -426,6 +421,12 @@ bool Worker::CanGatherNow()
     return CanGather() && IsCloseEnough(selected_resource_ptr_);
 }
 
+bool Worker::CanMove()
+{
+
+    return true;
+}
+
 void Worker::BeginGather(){BeginGather(0.0);}
 void Worker::BeginGather(double dt){
     // begin gather
@@ -538,7 +539,7 @@ bool Worker::AddToInventory(ItemTypes type, double yield){
     if (stats_map_[WorkerStats::CURRCARRY] + yield > stats_map_[WorkerStats::MAXCARRY]){
         return false;
     }
-    inventory_.AddToInventory(type, yield);
+    inventory_.AddTo(type, yield);
     must_update_stats_ = true;
     return true;
 }
@@ -909,9 +910,11 @@ bool Worker::InferAction(bool append_action)
 {
     auto state = WorkerStates::UNDEFINED;
 
+    // if we have attention, then figure out what we can do
     if (HasAttention())
     {
         // default, move
+        // BUG: if you right click a building, then cangather is false, so then the state becomes moving, but the target was never updated from 0, 0 so then the worker begins moving towards the origin.
         state = WorkerStates::MOVING;
 
         // gather resource
@@ -921,7 +924,7 @@ bool Worker::InferAction(bool append_action)
         }
     }
     
-    // if we've set a state
+    // if we've set a state, then either add or set
     if (state != WorkerStates::UNDEFINED)
     {
         // check if we're appending or setting

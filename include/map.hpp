@@ -127,6 +127,8 @@ class Map: public Interactive
         void onSelect(){if (on_select_cb_ != nullptr){on_select_cb_();}}
         std::shared_ptr<Rect<double>> GetSelectRect();
 
+        bool Atleast1WorkerSelected();
+
         void InferAction();
         void InferAction(DynamicObjectPtr ptr, double x, double y);
 };

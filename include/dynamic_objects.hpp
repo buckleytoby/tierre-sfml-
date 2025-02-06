@@ -17,7 +17,8 @@
 #include "gameobject.hpp"
 
 // forward decls
-class Task; typedef std::shared_ptr<Task> TaskPtr;
+class Task; 
+typedef std::shared_ptr<Task> TaskPtr;
 class Surroundings;
 class ImmediateSurroundings;
 class NearbySurroundings;
@@ -99,7 +100,8 @@ class DynamicObject: public GameObject
         void SetAttention(BuildingPtr building_ptr);
         void SetAttention(ResourcePtr ptr);
         void SetAttention(TilePtr ptr);
-        void SetAttention(std::shared_ptr<Rect<double>> rect){attention_rect_ = rect;}
+        void SetGoal(GameObjectPtr game_object);
+        void SetAttention(std::shared_ptr<Rect<double>> rect) { attention_rect_ = rect; }
         void SetAttention(TaskPtr ptr);
 
         bool HasAttention();
@@ -113,6 +115,7 @@ class DynamicObject: public GameObject
         void SetGoalToSelectedBuilding();
         void SetGoalToSelectedResource();
 
+        void SetGoal(double x, double y);
 
         std::shared_ptr<Rect<double>> GetAttentionRect(){return attention_rect_;}
 
@@ -254,7 +257,6 @@ class Worker : public DynamicObject
         virtual HandleInputNS::InputResult onHandleInput(sf::Event& event);
         void AI(double dt);
         void Reset();
-        void SetGoal(double x, double y);
         void SetState(WorkerStates worker_state);
         void ClearState();
         Rect<double> GetImmediateSurroundingsRect();
@@ -269,6 +271,7 @@ class Worker : public DynamicObject
         bool CanGather(ResourcePtr ptr);
         bool CanGather();
         bool CanGatherNow();
+        bool CanMove();
         bool InventoryHasRoom(ResourcePtr ptr);
 
         // Virtuals

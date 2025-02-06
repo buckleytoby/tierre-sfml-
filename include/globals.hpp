@@ -2,8 +2,14 @@
 #ifndef GLOBALS_HPP_INCLUDED
 #define GLOBALS_HPP_INCLUDED
 
+// standard includes
 #include <memory>
 #include <mutex>
+#include <vector>
+#include <queue>
+#include <map>
+
+// SFML
 #include "SFML/Graphics.hpp"
 
 // globals
