@@ -133,6 +133,7 @@ enum class WorkerInputs
     HANDLED,
 };
 enum class WorkerStates{
+    begin,
     UNDEFINED, // used for comparisons
     DEAD,
     IDLE,
@@ -146,6 +147,7 @@ enum class WorkerStates{
     CONSTRUCTINGIDLE,
     CRAFTING,
     CRAFTINGIDLE,
+    end
 };
 const std::string to_string(WorkerStates p);
 const std::string to_full_string(WorkerStates p);

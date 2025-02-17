@@ -11,6 +11,7 @@
 #include "utils.hpp"
 #include "interactive.hpp"
 #include "taskmanager.hpp"
+#include "event_manager.hpp"
 
 // class stubs
 class DynamicObject; typedef std::shared_ptr<DynamicObject> DynamicObjectPtr;
@@ -130,6 +131,7 @@ class Map: public Interactive
         bool Atleast1WorkerSelected();
 
         void InferAction();
+        void SubscriberSetSelectedWorkersState(WorkerStates new_state);
         void InferAction(DynamicObjectPtr ptr, double x, double y);
 };
 typedef std::shared_ptr<Map> MapPtr;

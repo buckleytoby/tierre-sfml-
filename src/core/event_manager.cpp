@@ -12,21 +12,26 @@ bool EventManager::Update(double dt)
     {
         auto& topic = topic_map.second;
 
-        // process all new messages on this topic
-        while (topic->message_queue.size() > 0)
-        {
-            // remove msg from the queue
-            auto msg = topic->message_queue.front();
-            topic->message_queue.pop();
-
-            // iterate through all subscribers to this topic
-            for (auto& subscriber: topic->subscribers)
-            {
-                // invoke the subscriber callback
-                // subscriber(msg);
-            }
-        }
+        topic->Update(dt);
     }
 
     return true;
 }
+
+bool EventManager::GetTopicIfExist(std::string topic_name, TopicBase::TopicBasePtr& topic)
+{
+    if (m_topics.find(topic_name) != m_topics.end())
+    {
+        // de-reference the iterator
+        topic = m_topics[topic_name];
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+// singleton, initialization
+EventManager EVENT_MANAGER;

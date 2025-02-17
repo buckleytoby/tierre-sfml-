@@ -8,6 +8,7 @@
 #include "map.hpp"
 #include "taskmanager.hpp"
 #include "interactive.hpp"
+#include "event_manager.hpp"
 
 // forward declarations
 class Widget; typedef std::shared_ptr<Widget> WidgetPtr;
@@ -49,6 +50,7 @@ class GUI: public Interactive
         void SetMousePosition(double x, double y){mouse_x_ = x; mouse_y_ = y;}
         void AddWidget(WidgetPtr widget){widgets_.push_back(widget);}
         void RemoveWidget(int id);
+        void SelectWorkerActionSubscriber(TilePtr msg);
 };
 
 // GUI specific to the gameplay gamescreen

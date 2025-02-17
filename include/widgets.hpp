@@ -335,4 +335,13 @@ class SelectItems: public Widget
 
 };
 
+class SelectWorkerAction: public Widget
+{
+    public:
+        virtual std::string GetName() { return "SelectWorkerAction"; }
+
+        // ctor
+        SelectWorkerAction(double x, double y, double w, double h);
+};
+
 #endif // WIDGETS_HPP

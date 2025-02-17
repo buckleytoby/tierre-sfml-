@@ -6,6 +6,10 @@ Map::Map(): Interactive()
     // ctor
     SetHandleInputCb(std::bind(&Map::onHandleInput, this, std::placeholders::_1));
     SetOnSelectCB(std::bind(&Map::SelectMouseObjects, this));
+
+    // subscribers
+    EVENT_MANAGER.CreateSubscriber<WorkerStates>("/map/", [this](WorkerStates msg){SubscriberSetSelectedWorkersState(msg);});
+
 }
 void Map::SetWidth(int width){
     width_ = width;
@@ -543,6 +547,11 @@ void Map::InferAction(){
     // interaction when at least 1 worker is selected. In this case we want worker to interact with the selected tile
     else if (Atleast1WorkerSelected())
     {
+        // Get the tile ptr at the mouse
+        auto tile = GetTile(mouse_x_, mouse_y_);
+
+        // Publish the selected tile to the GUI
+        EVENT_MANAGER.Publish<TilePtr>("/Map/InferAction/SelectWorkerAction", tile);
 
         // SetAttentionAndMove(mouse_x_, mouse_y_);
 
@@ -554,6 +563,14 @@ void Map::InferAction(){
         }
     }
 }
+
+/// @brief 
+/// @param new_state 
+void Map::SubscriberSetSelectedWorkersState(WorkerStates new_state)
+{
+    SetStates(new_state);
+}
+
 void Map::InferAction(DynamicObjectPtr ptr, double x, double y){
     // gives this dynamic object a reference to the tile at that location
     SetAttention(ptr, x, y); 

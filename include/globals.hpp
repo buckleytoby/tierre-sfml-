@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <functional>
 
 // SFML
 #include "SFML/Graphics.hpp"
@@ -46,7 +47,6 @@ enum class GamescreenStates {
     PAUSE_MENU,
     GAME_OVER
 };
-
 
 
 

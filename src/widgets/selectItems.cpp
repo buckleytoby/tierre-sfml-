@@ -14,6 +14,8 @@ SelectItems::SelectItems(double x, double y, double w, double h): Widget(x, y, w
     }
     // make the dropdown menu
     list_of_items_ = std::make_shared<Dropdown>(0, 50, item_strs);
+
+    // set the on-click callback
     list_of_items_->SetOnClickCallback([this](){
         std::cout << "clicked: " << list_of_items_->GetClickedIdx() << std::endl;
         list_of_items_->SetTextColor(sf::Color::Green);
@@ -58,6 +60,7 @@ SelectItems::SelectItems(double x, double y, double w, double h): Widget(x, y, w
     });
     AddChild(cancel_);
 }
+
 std::vector<ItemTypes> SelectItems::GetSelectedItems(){
     std::vector<ItemTypes> selected_items;
     for (auto& idx : list_of_items_->GetClickedIdxs()){

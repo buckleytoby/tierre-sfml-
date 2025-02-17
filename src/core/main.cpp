@@ -104,6 +104,9 @@ int main()
         // updates
         activeGamescreen->update(DELTATIME);
 
+        // update the event manager
+        EVENT_MANAGER.Update(DELTATIME);
+
         // clear the window with black color
         window.clear(sf::Color::Black);
 

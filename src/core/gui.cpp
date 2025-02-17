@@ -6,6 +6,14 @@
 GUI::GUI(){
     // ctor
     SetHandleInputCb(std::bind(&GUI::onHandleInput, this, std::placeholders::_1));
+
+    // register subscribers
+    EVENT_MANAGER.CreateSubscriber<TilePtr>("/Map/InferAction/SelectWorkerAction", 
+        [this](TilePtr msg)
+        {
+            SelectWorkerActionSubscriber(msg);
+        }
+    );
 }
 void GUI::Update(double dt){
     // update all widgets
@@ -36,14 +44,14 @@ void GUI::Draw(sf::RenderWindow& window){
         return;
     }
 
-    // draw the gameplay
+    //// draw the background tiles
     sf::Font font;
     if (!font.loadFromFile("c:\\Windows\\Fonts\\arial.ttf"))
     {
         return;
     }
 
-    // iterate through the viewport, size + 1 to draw the tiles on the edge
+    // Iterate through the viewport, size + 1 to draw the tiles on the edge
     for (int i=viewport_ref_->GetLeft(); i<viewport_ref_->GetRight()+1; i++){
         for (int j=viewport_ref_->GetBottom(); j<viewport_ref_->GetTop()+1; j++){
             // get the tile from map_ref_
@@ -75,12 +83,14 @@ void GUI::Draw(sf::RenderWindow& window){
         }
     }
 
+    //// Draw the game objects on top of the background
     // iterate through dynamic game objects
     for (auto& dynamic_object_ptr : map_ref_->dynamic_object_ptrs_){
         // calculate pixel position for i, j
         dynamic_object_ptr->Draw(window);
     }
 
+    //// Draw the GUI elements on the top layer
     // draw all widgets
     for (auto& widget: widgets_){
         widget->draw(window, sf::Transform::Identity);
@@ -108,3 +118,12 @@ void GUI::RemoveWidget(int id){
 //     // draw the task manager on top (if visible)
 //     task_manager_panel_ptr_->draw(window, sf::Transform::Identity);
 // }
+
+void GUI::SelectWorkerActionSubscriber(TilePtr msg)
+{
+    // Create the widget
+    WidgetPtr widget = std::make_shared<SelectWorkerAction>((double)msg->GetX(), (double)msg->GetY(), 100.0, 100.0);
+
+    // Add to our list of widgets
+    AddWidget(widget);
+}
